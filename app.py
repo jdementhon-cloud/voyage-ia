@@ -1,30 +1,63 @@
-def generer_prompt(pays, categorie, lieux):
-    texte_lieux = ""
-    for _, row in lieux.iterrows():
-        texte_lieux += (
-            f"- {row['nom_lieu']} | "
-            f"Prix : {row['prix']}€ | "
-            f"⭐ {row['note_5']}/5 | "
-            f"Idéal pour : {row['ideal_pour']} | "
-            f"Réservation : {row['url_reservation']}\n"
-        )
+import streamlit as st
+import pandas as pd
 
-    prompt = f"""
-Tu es un expert en voyages.
+# ============================
+#   CHARGEMENT DU FICHIER
+# ============================
+st.title("Test Application Voyage – Version Simple")
 
-Crée pour moi un **séjour parfait de 3 jours** à **{pays}**, 
-centré sur la catégorie d’activités : **{categorie}**.
+try:
+    df = pd.read_excel("data.xlsx")
+except Exception as e:
+    st.error(f"Erreur lors du chargement du fichier : {e}")
+    st.stop()
 
-Voici la liste des meilleurs lieux à intégrer dans le séjour :
+st.subheader("Colonnes détectées :")
+st.write(list(df.columns))
 
-{texte_lieux}
+# ============================
+#   CORRECTION DES NOMS DE COLONNES (pour enlever espaces/accents)
+# ============================
 
-Format attendu :
-- 🗓️ Une proposition détaillée jour par jour
-- ✨ Pourquoi ces lieux sont exceptionnels
-- 💡 Conseils pratiques
-- 🔗 Inclure les liens de réservation fournis dans les lieux
+df.columns = (
+    df.columns
+    .str.lower()
+    .str.replace(" ", "_")
+    .str.replace("é", "e")
+    .str.replace("'", "")
+)
 
-Reste concis mais inspirant.
-"""
-    return prompt
+st.subheader("Colonnes après normalisation :")
+st.write(list(df.columns))
+
+# ============================
+#   SELECTBOX PAYS
+# ============================
+if "pays" not in df.columns:
+    st.error("La colonne 'pays' est absente du fichier Excel.")
+    st.stop()
+
+pays_selectionne = st.selectbox("Choisissez un pays :", sorted(df["pays"].dropna().unique()))
+
+# ============================
+#   SELECTBOX CATEGORIE
+# ============================
+if "categorie" not in df.columns:
+    st.error("La colonne 'categorie' est absente du fichier Excel.")
+    st.stop()
+
+categories_dispos = sorted(df[df["pays"] == pays_selectionne]["categorie"].dropna().unique())
+
+categorie_selectionnee = st.selectbox("Choisissez une catégorie :", categories_dispos)
+
+# ============================
+#   AFFICHAGE DES LIEUX
+# ============================
+st.subheader("Résultats :")
+
+resultats = df[(df["pays"] == pays_selectionne) & (df["categorie"] == categorie_selectionnee)]
+
+if resultats.empty:
+    st.warning("Aucun résultat trouvé pour cette combinaison.")
+else:
+    st.dataframe(resultats)
