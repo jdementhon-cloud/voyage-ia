@@ -2,126 +2,125 @@ import streamlit as st
 import pandas as pd
 from groq import Groq
 
-# -------------------------------------
-# CONFIG STREAMLIT
-# -------------------------------------
-st.set_page_config(page_title="Générateur de séjour parfait", layout="wide")
-
+# -----------------------------------
+# CONFIG
+# -----------------------------------
+st.set_page_config(page_title="Générateur de séjour parfait (IA)", layout="wide")
 st.title("✨ Générateur de séjour parfait (IA)")
 
-# -------------------------------------
-# CHARGEMENT DES DONNÉES
-# -------------------------------------
-df = pd.read_excel("data.xlsx")
+# -----------------------------------
+# LOAD DATA
+# -----------------------------------
+@st.cache_data
+def load_data():
+    df = pd.read_excel("data.xlsx")
+    df.columns = (
+        df.columns.str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+        .str.replace("/", "_")
+        .str.replace("-", "_")
+    )
+    return df
 
-# Nettoyage des colonnes (minuscules)
-df.columns = df.columns.str.lower().str.replace(" ", "_")
+df = load_data()
 
-# -------------------------------------
-# INTERFACE UTILISATEUR
-# -------------------------------------
+# Trouver automatiquement la colonne 'note'
+note_col_candidates = [c for c in df.columns if "note" in c or "5" in c]
+note_col = note_col_candidates[0] if note_col_candidates else None
 
-# ---- Choix du pays ----
-pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].dropna().unique()))
 
-# ---- Choix de catégorie filtrée par pays ----
-categories_disponibles = df[df["pays"] == pays]["categorie"].dropna().unique()
-categorie = st.selectbox("🍀 Choisissez une catégorie d’activité :", sorted(categories_disponibles))
+# -----------------------------------
+# UI
+# -----------------------------------
+pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].unique()))
 
-# ---- Filtrer les lieux correspondants ----
-lieux_selectionnes = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
+categories = sorted(df[df["pays"] == pays]["categorie"].unique())
+categorie = st.selectbox("🍀 Choisissez une catégorie d’activité :", categories)
 
-if lieux_selectionnes.empty:
+lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
+
+if lieux.empty:
     st.error("Aucun lieu trouvé pour cette combinaison.")
 else:
-    st.success(f"{len(lieux_selectionnes)} lieu(x) trouvé(s) ✔")
+    st.success(f"{len(lieux)} lieu(x) trouvé(s) ✔")
 
-# =====================================
-# 🗺️ CARTE INTERACTIVE
-# =====================================
-st.subheader("🗺️ Carte interactive des lieux sélectionnés")
 
-if "latitude" in lieux_selectionnes.columns and "longitude" in lieux_selectionnes.columns:
-    
-    lieux_map = lieux_selectionnes[["nom_lieu", "latitude", "longitude"]].dropna()
-
-    if not lieux_map.empty:
-        st.map(
-            lieux_map.rename(columns={"latitude": "lat", "longitude": "lon"}),
-            zoom=10,
-            use_container_width=True
-        )
-
-        with st.expander("Voir les lieux affichés sur la carte"):
-            st.dataframe(lieux_map)
-
-    else:
-        st.info("Aucune coordonnée disponible pour afficher la carte.")
-else:
-    st.info("Les colonnes latitude/longitude sont introuvables dans vos données.")
-
-# =====================================
-# IA – CONSTRUCTION DU PROMPT
-# =====================================
-
+# -----------------------------------
+# PROMPT BUILDER
+# -----------------------------------
 def construire_prompt(pays, categorie, lieux):
     texte = ""
+
     for _, row in lieux.iterrows():
         texte += (
-            f"- **{row['nom_lieu']}**\n"
-            f"  • Prix : {row['prix']}€\n"
-            f"  • ⭐ Note : {row['note5']}/5\n"
-            f"  • Idéal pour : {row['ideal_pour']}\n"
-            f"  • 🔗 Réservation : {row['url_reservation']}\n\n"
+            f"- **{row['nom_lieu']}** ({row['ville']})\n"
+            f"  ⭐ Note : {row[note_col]}/5\n"
+            f"  🏷️ Idéal pour : {row['ideal_pour']}\n"
+            f"  🔗 Réservation : {row['url_reservation']}\n\n"
         )
 
     prompt = f"""
-Tu es un expert en création d’itinéraires de voyage.
+Tu es un expert en organisation de voyages et guide touristique professionnel.
 
-Crée un **séjour parfait de 1 journée** à **{pays}**, basé sur la catégorie **{categorie}**.
+Crée un **itinéraire complet et réaliste de 3 jours** à **{pays}**, pour la catégorie d’activité **{categorie}**.
 
-Voici les lieux proposés :
+### Voici la liste des lieux à intégrer impérativement dans les propositions :
 
 {texte}
 
-Génère un texte structuré contenant :
-- 🗓️ Un programme complet heure par heure
-- 🎯 Pourquoi ces lieux sont parfaits
-- 🚶 Conseils de transport et optimisations
-- 🔗 Intègre les liens de réservation dans le texte
+### FORMAT ATTENDU :
 
-Format court, clair et immersif.
+- **Jour 1 :** programme détaillé, activités, explications
+- **Jour 2 :** programme détaillé
+- **Jour 3 :** programme détaillé
+- Mentionne clairement **dans quel jour apparaît chaque lieu**
+- Chaque jour doit contenir au moins **un des lieux listés**
+- Ajoute des conseils pratiques (horaires, transport, durée)
+- À la fin, fais un bloc :
+
+### 🔗 Liens de réservation  
+
+Liste tous les liens fournis, en markdown.
+
+Sois concis mais inspirant. Style premium, cohérent, structuré.
 """
 
     return prompt
 
 
-# =====================================
-# IA – GÉNÉRATION AVEC GROQ
-# =====================================
-
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-
+# -----------------------------------
+# IA CALL
+# -----------------------------------
 def generer_sejour(prompt):
     try:
-        response = client.chat.completions.create(
-            model="llama3-70b-8k-instant",  # modèle fiable
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1200,
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "Tu es un expert en voyages de luxe."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+            max_tokens=1600,
         )
-        return response.choices[0].message["content"]
+
+        # ⚠️ Correction importante ici (plus de message["content"])
+        return completion.choices[0].message.content
+
     except Exception as e:
-        return f"❌ Erreur : {e}"
+        return f"❌ Erreur API : {e}"
 
 
-# =====================================
-# BOUTON – GÉNÉRER LE SÉJOUR
-# =====================================
+# -----------------------------------
+# BUTTON
+# -----------------------------------
+if st.button("✨ Générer mon séjour parfait", type="primary"):
 
-if st.button("✨ Générer mon séjour parfait", use_container_width=True):
-    with st.spinner("⏳ L’IA prépare votre séjour, un instant…"):
-        prompt = construire_prompt(pays, categorie, lieux_selectionnes)
+    with st.spinner("🤖 L’IA prépare votre séjour, un instant..."):
+        prompt = construire_prompt(pays, categorie, lieux)
         resultat = generer_sejour(prompt)
 
-    st.subheader("🎉 Séjour généré ! Voici votre proposition :")
-    st.write(resultat)
+    st.success("🎉 Séjour généré ! Voici votre proposition :")
+    st.markdown(resultat)
