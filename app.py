@@ -48,16 +48,9 @@ categorie = st.selectbox("Choisissez une catégorie d’activité :", categories
 # Filtrage final
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
-# =========================
-#  AFFICHAGE DES LIEUX TROUVÉS
-# =========================
-
 if len(lieux) == 0:
     st.error("Aucun lieu disponible pour cette combinaison.")
     st.stop()
-
-st.subheader("Lieux disponibles :")
-st.dataframe(lieux[["nom_lieu", "ville", "prix", "note5", "ideal_pour", "url_reservation"]])
 
 # =========================
 #  GENERATION PROMPT
@@ -68,31 +61,26 @@ def generer_prompt(pays, categorie, lieux):
     texte_lieux = ""
     for _, row in lieux.iterrows():
         texte_lieux += (
-            f"- **{row['nom_lieu']}** ({row['ville']})\n"
-            f"  - Prix : {row['prix']}€\n"
-            f"  - ⭐ Note : {row['note5']}/5\n"
-            f"  - Idéal pour : {row['ideal_pour']}\n"
-            f"  - 🔗 Réservation : {row['url_reservation']}\n\n"
+            f"- {row['nom_lieu']} ({row['ville']}) | "
+            f"{row['prix']}€ | ⭐ {row['note5']}/5 | "
+            f"Idéal pour : {row['ideal_pour']}\n"
         )
 
     prompt = f"""
 Tu es un expert en voyages.
 
-📍 Crée un **séjour parfait de 3 jours** à **{pays}**  
-Catégorie d’activité : **{categorie}**
+Crée un **programme d’une journée parfaite** à **{pays}**, 
+autour de la catégorie : **{categorie}**.
 
-Voici la liste des lieux recommandés :
-
+Voici les lieux possibles :
 {texte_lieux}
 
 🎯 Format demandé :
-- Itinéraire détaillé jour par jour
-- Explication des choix
-- Recommandations pratiques
-- Ajouter les liens de réservation déjà fournis
-- Ton inspirant mais clair
-
-Merci !
+- Programme horaire clair (matin / midi / après-midi / soir)
+- Explications courtes mais inspirantes
+- Donner envie d’y aller
+- Conseils pratiques
+- Intégrer le plus possible les lieux listés
 """
     return prompt
 
@@ -102,9 +90,9 @@ Merci !
 
 def generer_sejour(prompt):
     response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",
+        model="llama3-70b-8192",   # ⬅️ MODELE QUI MARCHE
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1500,
+        max_tokens=1200,
     )
     return response.choices[0].message["content"]
 
@@ -117,9 +105,5 @@ if st.button("✨ Générer mon séjour parfait"):
         prompt = generer_prompt(pays, categorie, lieux)
         resultat = generer_sejour(prompt)
 
-    st.subheader("🎉 Votre séjour personnalisé :")
+    st.subheader("📅 Votre journée parfaite :")
     st.write(resultat)
-
-    st.subheader("🔗 Liens de réservation :")
-    for _, row in lieux.iterrows():
-        st.markdown(f"- [{row['nom_lieu']}]({row['url_reservation']})")
