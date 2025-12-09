@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import pdfkit
+import base64
+import tempfile
 from groq import Groq
 
 # -----------------------------------
@@ -7,12 +10,9 @@ from groq import Groq
 # -----------------------------------
 st.set_page_config(page_title="ATLAS — Voyage IA", layout="wide")
 
-# STYLE CSS PERSONNALISÉ
+# STYLE
 st.markdown("""
 <style>
-body {
-    background-color: #f5f6fa;
-}
 .title-atlas {
     font-size: 60px;
     font-weight: 800;
@@ -26,17 +26,17 @@ body {
     color: #555;
     margin-bottom: 40px;
 }
-.stButton>button {
-    background: linear-gradient(90deg, #6a5af9, #805af9);
-    color: white;
-    padding: 14px 28px;
+.place-card {
+    background: white;
+    padding: 15px;
     border-radius: 12px;
-    font-size: 18px;
-    border: none;
+    margin-bottom: 15px;
+    border: 1px solid #eee;
 }
-.stButton>button:hover {
-    background: linear-gradient(90deg, #5847e8, #6e47e8);
-    color: white;
+.place-img {
+    width: 100%;
+    border-radius: 10px;
+    margin-bottom: 10px;
 }
 .result-box {
     padding: 20px;
@@ -48,14 +48,12 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-
 # -----------------------------------
-# TITRE ATLAS
+# TITLE ATLAS
 # -----------------------------------
 st.markdown("<div class='title-atlas'>ATLAS</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitle-atlas'>Créateur d’itinéraires personnalisés grâce à l’IA</div>",
             unsafe_allow_html=True)
-
 
 # -----------------------------------
 # LOAD DATA
@@ -73,27 +71,21 @@ def load_data():
     return df
 
 df = load_data()
-
-# Trouver automatiquement la colonne 'note'
-note_col_candidates = [c for c in df.columns if "note" in c]
-note_col = note_col_candidates[0] if note_col_candidates else None
-
+note_col = [c for c in df.columns if "note" in c][0]
 
 # -----------------------------------
-# UI — CHOIX UTILISATEUR
+# INPUTS
 # -----------------------------------
-pays = st.selectbox("🌍 Choisissez une destination :", sorted(df["pays"].unique()))
-
+pays = st.selectbox("🌍 Destination :", sorted(df["pays"].unique()))
 categories = sorted(df[df["pays"] == pays]["categorie"].unique())
-categorie = st.selectbox("🍀 Sélectionnez une catégorie d’activité :", categories)
+categorie = st.selectbox("🍀 Catégorie d’activité :", categories)
 
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
 if lieux.empty:
-    st.error("❌ Aucun lieu trouvé pour cette destination et catégorie.")
+    st.error("❌ Aucun lieu trouvé.")
 else:
-    st.success(f"🔎 {len(lieux)} lieu(x) disponible(s)")
-
+    st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -----------------------------------
 # PROMPT BUILDER
@@ -113,35 +105,25 @@ def construire_prompt(pays, categorie, lieux):
 Tu es un expert du voyage haut de gamme.
 
 Génère un **itinéraire inspirant et détaillé de 3 jours** à **{pays}**, 
-spécialement centré sur l’activité **{categorie}**.
+centré sur l’activité **{categorie}**, en intégrant les lieux suivants :
 
-### Lieux à intégrer obligatoirement :
 {texte}
 
-### Format attendu :
+Format attendu :
+- Jour 1 : programme détaillé + au moins un lieu
+- Jour 2 : programme détaillé + au moins un lieu
+- Jour 3 : programme détaillé + au moins un lieu
 
-**Jour 1 :**  
-- activités détaillées  
-- intégration d’un des lieux fournis  
-- conseils pratiques (durée, transport, horaires)
-
-**Jour 2 :** idem
-
-**Jour 3 :** idem
-
-### À la fin :
-Créer un bloc :
+Puis ajoute un bloc :
 
 ### 🔗 Liens de réservation  
-- Liste tous les liens fournis
-
-Style premium, immersif, clair, inspirant.
+Liste simplement les liens fournis.
 """
     return prompt
 
 
 # -----------------------------------
-# IA CALL
+# CALL IA
 # -----------------------------------
 def generer_sejour(prompt):
     try:
@@ -150,14 +132,13 @@ def generer_sejour(prompt):
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Tu es un expert en création de voyages sur mesure."},
+                {"role": "system", "content": "Tu es un expert en création de voyages."},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.7,
-            max_tokens=1500,
+            max_tokens=1600,
         )
 
-        # Important : accès correct au contenu
         return completion.choices[0].message.content
 
     except Exception as e:
@@ -165,14 +146,60 @@ def generer_sejour(prompt):
 
 
 # -----------------------------------
-# BOUTON
+# GENERATE ROUTE
 # -----------------------------------
+result_html = ""
+
 if st.button("✨ Générer mon séjour parfait"):
-    with st.spinner("🧭 ATLAS prépare votre itinéraire sur mesure…"):
+    with st.spinner("🧭 ATLAS prépare votre voyage…"):
         prompt = construire_prompt(pays, categorie, lieux)
         resultat = generer_sejour(prompt)
 
     st.markdown("<div class='result-box'>", unsafe_allow_html=True)
     st.markdown("### 🎉 Votre séjour personnalisé :")
     st.markdown(resultat)
+
+    # 📸 DISPLAY IMAGES OF ALL PLACES
+    st.markdown("### 🖼️ Images des lieux sélectionnés")
+
+    img_html = ""
+    for _, row in lieux.iterrows():
+        if pd.notna(row["lien_images"]):
+            st.markdown(
+                f"""
+                <div class='place-card'>
+                    <img src="{row['lien_images']}" class='place-img'>
+                    <b>{row['nom_lieu']}</b> – {row['ville']}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            img_html += f"<h3>{row['nom_lieu']}</h3><img src='{row['lien_images']}' width='500'><br>"
+
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # -----------------------------------------------------
+    # PDF EXPORT
+    # -----------------------------------------------------
+    st.markdown("### 📄 Télécharger en PDF")
+
+    pdf_content = f"""
+    <h1>ATLAS — Voyage personnalisé</h1>
+    <h2>{pays} — {categorie}</h2>
+    <br>
+    {resultat}
+    <br><br>
+    <h2>Images</h2>
+    {img_html}
+    """
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+        pdfkit.from_string(pdf_content, tmp_file.name)
+        pdf_bytes = open(tmp_file.name, "rb").read()
+
+    st.download_button(
+        label="📄 Télécharger le PDF",
+        data=pdf_bytes,
+        file_name="ATLAS_sejour.pdf",
+        mime="application/pdf"
+    )
