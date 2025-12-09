@@ -12,8 +12,8 @@ st.markdown("<h1 style='text-align:center;'>✨ Générateur de séjour parfait 
 # Chargement du fichier Excel
 df = pd.read_excel("data.xlsx")
 
-# Normalisation colonnes (important)
-df.columns = [c.lower().strip().replace(" ", "_") for c in df.columns]
+# Normalisation colonnes
+df.columns = [c.lower().strip().replace(" ", "_").replace("/", "_") for c in df.columns]
 
 # Liste des pays
 pays_list = sorted(df["pays"].dropna().unique())
@@ -23,17 +23,14 @@ pays_list = sorted(df["pays"].dropna().unique())
 # ----------------------------
 pays = st.selectbox("🌍 Choisissez un pays :", pays_list)
 
-# Filtrage des catégories disponibles pour CE pays
+# Filtrage catégories disponibles pour CE pays
 df_filtre_pays = df[df["pays"] == pays]
 categories_disponibles = sorted(df_filtre_pays["categorie"].dropna().unique())
 
-categorie = st.selectbox(
-    "🍀 Choisissez une catégorie d’activité :",
-    categories_disponibles
-)
+categorie = st.selectbox("🍀 Choisissez une catégorie d’activité :", categories_disponibles)
 
 # ----------------------------
-# FILTRAGE FINAL DES LIEUX
+# FILTRAGE LIEUX
 # ----------------------------
 lieux = df_filtre_pays[df_filtre_pays["categorie"] == categorie]
 
@@ -42,14 +39,15 @@ if len(lieux) == 0:
     st.stop()
 
 # ----------------------------
-# CONSTRUCTION DU PROMPT POUR L’IA
+# CONSTRUCTION DU PROMPT
 # ----------------------------
 def construire_prompt(pays, categorie, lieux):
-    liste_txt = ""
+    texte = ""
+
     for _, row in lieux.iterrows():
-        liste_txt += (
+        texte += (
             f"- **{row['nom_lieu']}** à {row['ville']} "
-            f"({row['prix']}€) ⭐ {row['note5']}/5\n"
+            f"({row['prix']}€) ⭐ {row['note_5']}/5\n"
             f"  👉 Idéal pour : {row['ideal_pour']}\n"
             f"  🔗 Réservation : {row['url_reservation']}\n\n"
         )
@@ -57,48 +55,47 @@ def construire_prompt(pays, categorie, lieux):
     prompt = f"""
 Tu es un expert en création de voyages premium.
 
-Génère un **séjour parfait de 3 jours** à **{pays}** basé sur la catégorie :
+Génère un **séjour parfait de 3 jours** à **{pays}** basé sur cette catégorie :
 👉 **{categorie}**
 
-Voici les lieux à intégrer absolument dans le voyage :
+Voici les lieux à intégrer absolument :
 
-{liste_txt}
+{texte}
 
 ### Format attendu :
-- Séparer clairement **Jour 1**, **Jour 2**, **Jour 3**
-- Décrire un itinéraire cohérent et inspirant
-- Expliquer pourquoi chaque lieu est exceptionnel
-- Ajouter les **liens de réservation** lorsque disponibles
-- Utiliser un ton chaleureux, immersif, et fluide
+- **Jour 1**, **Jour 2**, **Jour 3**
+- Itinéraire complet + ambiance + conseils
+- Pourquoi chaque lieu est exceptionnel
+- Intégration des **liens de réservation**
+- Style immersif et inspirant
 
 Commence maintenant ⬇️
 """
     return prompt
 
-
 # ----------------------------
-# BOUTON DE GÉNÉRATION IA
+# BOUTON GÉNÉRATION IA
 # ----------------------------
 if st.button("✨ Générer mon séjour parfait"):
+
     st.info("⏳ L’IA prépare votre séjour, un instant…")
 
     prompt = construire_prompt(pays, categorie, lieux)
 
-    # Client Groq
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
     try:
         response = client.chat.completions.create(
-            model="llama3-8b-instant",   # ✅ modèle valide
+            model="llama3-8b-instant",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1500
         )
 
-        texte = response.choices[0].message["content"]
+        texte_final = response.choices[0].message["content"]
 
         st.success("🎉 Votre séjour parfait est prêt !")
-        st.markdown(texte)
+        st.markdown(texte_final)
 
     except Exception as e:
-        st.error("Erreur lors de la génération IA.")
+        st.error("Erreur lors de l’appel à l’IA.")
         st.code(str(e))
