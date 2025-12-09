@@ -3,7 +3,7 @@ import pandas as pd
 from groq import Groq
 
 # -------------------------------
-# CONFIGURATION GÉNÉRALE
+# CONFIG GÉNÉRALE
 # -------------------------------
 st.set_page_config(
     page_title="Générateur de Séjour Parfait",
@@ -84,7 +84,23 @@ st.markdown("""
 # CHARGEMENT DES DONNÉES
 # -------------------------------
 df = pd.read_excel("data.xlsx")
+# Nettoyage simple des noms de colonnes
 df.columns = df.columns.str.lower().str.replace(" ", "_")
+
+# --- Détection robuste de la colonne de note (/5) ---
+NOTE_COL = None
+for candidate in ["note5", "note_5", "note/5"]:
+    if candidate in df.columns:
+        NOTE_COL = candidate
+        break
+
+if NOTE_COL is None:
+    st.error("Impossible de trouver la colonne de note (/5) dans votre fichier Excel.")
+    st.stop()
+
+# On suppose que ces colonnes existent après ton nettoyage :
+# pays, ville, nom_lieu, categorie, pour_qui, latitude, longitude,
+# prix, <NOTE_COL>, nombre_davis, ideal_pour, lien_images, url_reservation
 
 # -------------------------------
 # FORMULAIRE UTILISATEUR
@@ -108,19 +124,25 @@ if lieux.empty:
 else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s) ✔️")
 
-
 # -------------------------------
 # PROMPT IA
 # -------------------------------
 def construire_prompt(pays, categorie, lieux):
     texte = ""
     for _, row in lieux.iterrows():
+        # Sécurité : certaines colonnes peuvent être nulles
+        nom = row.get("nom_lieu", "Lieu")
+        prix = row.get("prix", "N.C.")
+        note = row.get(NOTE_COL, "N.C.")
+        ideal = row.get("ideal_pour", "N.C.")
+        url = row.get("url_reservation", "")
+
         texte += (
-            f"- **{row['nom_lieu']}**\n"
-            f"  • Prix : {row['prix']}€\n"
-            f"  • ⭐ Note : {row['note5']}/5\n"
-            f"  • Idéal pour : {row['ideal_pour']}\n"
-            f"  • 🔗 Réservation : {row['url_reservation']}\n\n"
+            f"- **{nom}**\n"
+            f"  • Prix : {prix}€\n"
+            f"  • ⭐ Note : {note}/5\n"
+            f"  • Idéal pour : {ideal}\n"
+            + (f"  • 🔗 Réservation : {url}\n\n" if pd.notna(url) and url != "" else "\n")
         )
 
     prompt = f"""
@@ -132,9 +154,9 @@ Voici les lieux disponibles :
 Délivre :
 - Un programme **heure par heure**
 - Une mise en scène immersive
-- Conseils pratiques
-- Intègre les **liens de réservation**
-- Un texte fluide, inspirant, premium.
+- Des conseils pratiques
+- Intègre les **liens de réservation** fournis
+- Un texte fluide, inspirant, premium, en français.
 """
 
     return prompt
@@ -144,17 +166,17 @@ Délivre :
 # -------------------------------
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-def generer_sejour(prompt):
+def generer_sejour(prompt: str) -> str:
     try:
         response = client.chat.completions.create(
-            model="llama3-70b-8k-instant",
+            model="llama3-70b-8k-instant",  # modèle dispo
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1200,
         )
-        return response.choices[0].message["content"]
+        # ⚠️ CORRECTION ICI : on doit utiliser .content, pas ["content"]
+        return response.choices[0].message.content
     except Exception as e:
         return f"❌ Erreur API : {e}"
-
 
 # -------------------------------
 # BOUTON GÉNÉRATION
@@ -162,13 +184,16 @@ def generer_sejour(prompt):
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 
 if st.button("✨ Générer mon séjour parfait", use_container_width=True):
-    with st.spinner("⏳ L’IA prépare votre séjour sur mesure..."):
-        prompt = construire_prompt(pays, categorie, lieux)
-        resultat = generer_sejour(prompt)
+    if lieux.empty:
+        st.error("Aucun lieu disponible pour générer un séjour.")
+    else:
+        with st.spinner("⏳ L’IA prépare votre séjour sur mesure..."):
+            prompt = construire_prompt(pays, categorie, lieux)
+            resultat = generer_sejour(prompt)
 
-    st.markdown("<div class='result-box'>", unsafe_allow_html=True)
-    st.markdown("### 🧳 Votre séjour personnalisé :")
-    st.write(resultat)
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<div class='result-box'>", unsafe_allow_html=True)
+        st.markdown("### 🧳 Votre séjour personnalisé :")
+        st.write(resultat)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
