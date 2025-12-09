@@ -2,22 +2,18 @@ import streamlit as st
 import pandas as pd
 from groq import Groq
 
-# ------------------------------
-# CONFIGURATION PAGE
-# ------------------------------
-st.set_page_config(page_title="Générateur de séjour parfait", layout="wide")
-
+# -----------------------------------
+# CONFIG
+# -----------------------------------
+st.set_page_config(page_title="Générateur de séjour parfait (IA)", layout="wide")
 st.title("✨ Générateur de séjour parfait (IA)")
 
-# ------------------------------
-# CHARGEMENT DU FICHIER EXCEL
-# ------------------------------
-
+# -----------------------------------
+# LOAD DATA
+# -----------------------------------
 @st.cache_data
 def load_data():
     df = pd.read_excel("data.xlsx")
-
-    # Normalisation douce des noms de colonnes
     df.columns = (
         df.columns.str.strip()
         .str.lower()
@@ -29,93 +25,73 @@ def load_data():
 
 df = load_data()
 
-
-# ------------------------------
-# DÉTECTION AUTOMATIQUE DE LA COLONNE "NOTE"
-# ------------------------------
-
-def detect_note_column(columns):
-    """
-    Trouve automatiquement une colonne correspondant à une note / rating.
-    Compatible avec note5, note_5, note, note_sur_5, note/5 ...
-    """
-    possible_keywords = ["note", "rating", "stars", "5"]
-
-    for col in columns:
-        for key in possible_keywords:
-            if key in col:
-                return col
-
-    return None  # Cas très improbable
+# Trouver automatiquement la colonne 'note'
+note_col_candidates = [c for c in df.columns if "note" in c or "5" in c]
+note_col = note_col_candidates[0] if note_col_candidates else None
 
 
-note_col = detect_note_column(df.columns)
+# -----------------------------------
+# UI
+# -----------------------------------
+pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].unique()))
 
+categories = sorted(df[df["pays"] == pays]["categorie"].unique())
+categorie = st.selectbox("🍀 Choisissez une catégorie d’activité :", categories)
 
-# ------------------------------
-# INTERFACE : CHOIX DU PAYS & CATÉGORIE
-# ------------------------------
+lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
-pays_list = sorted(df["pays"].unique())
-pays = st.selectbox("🌍 Choisissez un pays :", pays_list)
-
-# catégories disponibles uniquement pour ce pays
-categories_dispo = sorted(df[df["pays"] == pays]["categorie"].unique())
-categorie = st.selectbox("🍀 Choisissez une catégorie d’activité :", categories_dispo)
-
-
-# ------------------------------
-# SÉLECTION DES LIEUX POUR CE PAYS + CATÉGORIE
-# ------------------------------
-
-lieux_selectionnes = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
-
-if lieux_selectionnes.empty:
+if lieux.empty:
     st.error("Aucun lieu trouvé pour cette combinaison.")
 else:
-    st.success(f"{len(lieux_selectionnes)} lieu(x) trouvé(s) ✔")
+    st.success(f"{len(lieux)} lieu(x) trouvé(s) ✔")
 
 
-# ------------------------------
-# CONSTRUCTION DU PROMPT IA
-# ------------------------------
-
+# -----------------------------------
+# PROMPT BUILDER
+# -----------------------------------
 def construire_prompt(pays, categorie, lieux):
     texte = ""
 
     for _, row in lieux.iterrows():
         texte += (
             f"- **{row['nom_lieu']}** ({row['ville']})\n"
-            f"  - ⭐ Note : {row[note_col]}/5\n"
-            f"  - Idéal pour : {row['ideal_pour']}\n"
-            f"  - 🔗 Réservation : {row['url_reservation']}\n\n"
+            f"  ⭐ Note : {row[note_col]}/5\n"
+            f"  🏷️ Idéal pour : {row['ideal_pour']}\n"
+            f"  🔗 Réservation : {row['url_reservation']}\n\n"
         )
 
     prompt = f"""
-Tu es un expert en voyages.
+Tu es un expert en organisation de voyages et guide touristique professionnel.
 
-Crée un **séjour parfait de 3 jours** à **{pays}**, dans la catégorie **{categorie}**.
+Crée un **itinéraire complet et réaliste de 3 jours** à **{pays}**, pour la catégorie d’activité **{categorie}**.
 
-Voici les lieux disponibles :
+### Voici la liste des lieux à intégrer impérativement dans les propositions :
 
 {texte}
 
-Donne :
-- un programme détaillé jour par jour  
-- pourquoi ces lieux sont intéressants  
-- des conseils pratiques  
-- et termine par un récapitulatif de **tous les liens de réservation**.
+### FORMAT ATTENDU :
 
-Sois clair, inspirant et structuré.
+- **Jour 1 :** programme détaillé, activités, explications
+- **Jour 2 :** programme détaillé
+- **Jour 3 :** programme détaillé
+- Mentionne clairement **dans quel jour apparaît chaque lieu**
+- Chaque jour doit contenir au moins **un des lieux listés**
+- Ajoute des conseils pratiques (horaires, transport, durée)
+- À la fin, fais un bloc :
+
+### 🔗 Liens de réservation  
+
+Liste tous les liens fournis, en markdown.
+
+Sois concis mais inspirant. Style premium, cohérent, structuré.
 """
 
     return prompt
 
 
-# ------------------------------
-# APPEL À GROQ (LLAMA 3.1)
-# ------------------------------
-
+# -----------------------------------
+# IA CALL
+# -----------------------------------
 def generer_sejour(prompt):
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -123,30 +99,28 @@ def generer_sejour(prompt):
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Tu es un expert en organisation de voyages."},
+                {"role": "system", "content": "Tu es un expert en voyages de luxe."},
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=1500,
-            temperature=0.7
+            temperature=0.7,
+            max_tokens=1600,
         )
 
-        return completion.choices[0].message["content"]
+        # ⚠️ Correction importante ici (plus de message["content"])
+        return completion.choices[0].message.content
 
     except Exception as e:
         return f"❌ Erreur API : {e}"
 
 
-# ------------------------------
-# BOUTON
-# ------------------------------
-
+# -----------------------------------
+# BUTTON
+# -----------------------------------
 if st.button("✨ Générer mon séjour parfait", type="primary"):
 
     with st.spinner("🤖 L’IA prépare votre séjour, un instant..."):
-        prompt = construire_prompt(pays, categorie, lieux_selectionnes)
+        prompt = construire_prompt(pays, categorie, lieux)
         resultat = generer_sejour(prompt)
 
     st.success("🎉 Séjour généré ! Voici votre proposition :")
     st.markdown(resultat)
-
-
