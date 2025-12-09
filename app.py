@@ -1,26 +1,20 @@
-def generer_prompt(pays, categorie, lieux):
-    description_lieux = "\n".join([
-        f"- {row['nom_lieu']} | {row['prix']}€ | Note: {row['note/5']} ⭐ | Idéal pour: {row['idéal_pour']}"
-        for _, row in lieux.iterrows()
-    ])
+import streamlit as st
+import pandas as pd
 
-    prompt = f"""
-Tu es un expert premium en création de voyages sur mesure.
+st.title("Test affichage Streamlit")
 
-Destination : **{pays}**
-Catégorie choisie : **{categorie}**
+# --- Chargement du fichier ---
+st.write("Chargement du fichier...")
 
-Voici les activités disponibles :
+df = pd.read_excel("data.xlsx")
 
-{description_lieux}
+# Normalisation des colonnes (évite les accents)
+df.columns = df.columns.str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
 
-Créer :
-1️⃣ Un résumé du séjour  
-2️⃣ Un planning parfait sur 2 jours  
-3️⃣ Les meilleures suggestions personnalisées  
-4️⃣ Les liens directs de réservation  
+st.write("Colonnes détectées :", list(df.columns))
 
-Réponds uniquement en français.
-"""
-    return prompt
+# Menu simple
+pays = st.selectbox("Choisissez un pays", sorted(df["pays"].unique()))
+categorie = st.selectbox("Choisissez une catégorie", sorted(df["categorie"].unique()))
 
+st.write("Si tu vois cette phrase, l’app FONCTIONNE 👍")
