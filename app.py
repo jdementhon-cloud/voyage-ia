@@ -14,7 +14,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 df = pd.read_excel("data.xlsx")
 df.columns = df.columns.str.lower().str.strip()
 
-# normalisation colonnes
+# NORMALISATION COLONNES SELON TON FICHIER EXACT
 rename_map = {
     "pays": "pays",
     "ville": "ville",
@@ -24,8 +24,8 @@ rename_map = {
     "latitude": "latitude",
     "longitude": "longitude",
     "prix": "prix",
-    "note5": "note5",
-    "nombre_d'avis": "nombre_avis",
+    "note_5": "note_5",          # CORRECTION ICI
+    "nombre_d'avis": "nombre_davis",   # CORRECTION ICI
     "ideal_pour": "ideal_pour",
     "lien_images": "lien_images",
     "url_reservation": "url_reservation"
@@ -42,7 +42,7 @@ def construire_prompt(pays, categorie, lieux):
     for _, row in lieux.iterrows():
         texte += (
             f"- {row['nom_lieu']} ({row['ville']}) | "
-            f"Prix : {row['prix']}€ | ⭐ {row['note5']}/5 | "
+            f"Prix : {row['prix']}€ | ⭐ {row['note_5']}/5 | "  # COLONNE CORRIGÉE
             f"Idéal pour : {row['ideal_pour']} | "
             f"Réservation : {row['url_reservation']}\n"
         )
@@ -72,7 +72,7 @@ Format attendu : texte clair, structuré, sans liste brute.
 # -------------------------------
 def generer_sejour(prompt):
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",  # modèle sûr et dispo
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1500,
     )
@@ -94,7 +94,6 @@ categorie = st.selectbox("🎨 Choisissez une catégorie d’activité :", categ
 # Filtrer les lieux correspondant au choix
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
-# Aucun lieu → message
 if lieux.empty:
     st.error("Aucun lieu trouvé pour cette combinaison.")
     st.stop()
