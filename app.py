@@ -6,7 +6,7 @@ import os
 st.title("Générateur de séjour parfait (IA)")
 
 # ============================
-#   CHARGEMENT DU FICHIER
+#   CHARGEMENT FICHIER
 # ============================
 try:
     df = pd.read_excel("data.xlsx")
@@ -26,16 +26,25 @@ df.columns = (
     .str.replace("'", "")
 )
 
+st.subheader("Colonnes après normalisation :")
+st.write(list(df.columns))
+
 # ============================
 #   SELECTBOX PAYS
 # ============================
-pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].dropna().unique()))
+pays = st.selectbox(
+    "🌍 Choisissez un pays :",
+    sorted(df["pays"].dropna().unique())
+)
 
 # ============================
 #   SELECTBOX CATEGORIE
 # ============================
 categories = sorted(df[df["pays"] == pays]["categorie"].dropna().unique())
-categorie = st.selectbox("🎨 Choisissez une catégorie d’activité :", categories)
+categorie = st.selectbox(
+    "🍽️ Choisissez une catégorie d’activité :",
+    categories
+)
 
 # Filtrer le tableau
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
@@ -48,51 +57,46 @@ else:
     st.dataframe(lieux)
 
 # ============================
-#       GENERATEUR IA
+#    FONCTION PROMPT
 # ============================
 def construire_prompt(pays, categorie, lieux):
     texte = ""
-    for _, row in lieux.iterrows():
-        nom = row["nom_lieu"]
-        prix = row["prix"]
-        note = row["note5"]
-        ideal = row["ideal_pour"]
-        url = row["url_reservation"]
 
-        texte += f"- {nom} | {prix}€ | ⭐ {note}/5 | Pour : {ideal} | Réserver : {url}\n"
+    for _, row in lieux.iterrows():
+        nom = row.get("nom_lieu", "")
+        prix = row.get("prix", "")
+        note = row.get("note_5", "")        # <-- CORRECTION ICI
+        ideal = row.get("ideal_pour", "")
+        url = row.get("url_reservation", "")
+
+        texte += f"- {nom} | {prix}€ | ⭐ {note}/5 | Idéal pour : {ideal} | Réserver : {url}\n"
 
     prompt = f"""
 Tu es un expert en voyages.
 
 Produit un séjour parfait de 3 jours à {pays}.
-La catégorie d’activité est : {categorie}.
+La catégorie choisie est : {categorie}.
 
-Voici les lieux recommandés à intégrer :
+Liste des lieux recommandés :
 {texte}
 
 Ton output doit inclure :
 - Un plan jour par jour
-- Les raisons de chaque choix
-- Des conseils pratiques
+- Les raisons des choix
+- Des conseils utiles
 - Un ton inspirant et premium
-
-Réponds uniquement avec le texte final.
 """
-
     return prompt
 
 
 # ============================
 #   API GROQ
 # ============================
-groq_api = st.secrets["GROQ_API_KEY"] if "GROQ_API_KEY" in st.secrets else None
-
-if not groq_api:
-    st.error("⚠️ GROQ_API_KEY est introuvable dans Streamlit Cloud.")
+if "GROQ_API_KEY" not in st.secrets:
+    st.error("⚠️ GROQ_API_KEY manquante dans Streamlit Cloud.")
     st.stop()
 
-client = Groq(api_key=groq_api)
-
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 def generer_sejour(prompt):
     response = client.chat.completions.create(
@@ -104,7 +108,7 @@ def generer_sejour(prompt):
 
 
 # ============================
-#   BOUTON DE GENERATION
+#   BOUTON IA
 # ============================
 if st.button("✨ Générer mon séjour parfait"):
     with st.spinner("L’IA prépare votre séjour…"):
