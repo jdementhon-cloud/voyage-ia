@@ -1,94 +1,53 @@
 import streamlit as st
 import pandas as pd
 from groq import Groq
-import os
 
-# ----------------------------------------------------
-# 1️⃣ Charger la clé API (depuis Streamlit Cloud ou local)
-# ----------------------------------------------------
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY"))
+# --- Chargement du dataset ---
+df = pd.read_excel("data.xlsx")
+df.columns = df.columns.str.strip()
 
-if not GROQ_API_KEY:
-    st.error("❌ Clé API Groq manquante. Ajoutez-la dans Settings → Secrets.")
-    st.stop()
+# --- Client Groq (clé chargée depuis Streamlit Secrets) ---
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-client = Groq(api_key=GROQ_API_KEY)
+# --- Interface Streamlit ---
+st.title("🌍 Générateur de séjour parfait (IA)")
+st.write("Choisissez un **pays** et une **catégorie d’activité**, l’IA se charge du reste ✨")
 
-# ----------------------------------------------------
-# 2️⃣ Charger le dataset
-# ----------------------------------------------------
-@st.cache_data
-def load_data():
-    df = pd.read_excel("data.xlsx")
-    df.columns = df.columns.str.strip()
-    return df
+pays = st.selectbox("Choisissez un pays :", sorted(df["PAYS"].unique()))
 
-df = load_data()
+categories = sorted(df[df["PAYS"] == pays]["CATEGORIE"].dropna().unique())
+categorie = st.selectbox("Choisissez une catégorie d’activité :", categories)
 
-# ----------------------------------------------------
-# 3️⃣ Titre & description
-# ----------------------------------------------------
-st.set_page_config(page_title="Séjour parfait IA", layout="wide")
+# --- Bouton ---
+if st.button("✨ Générer mon séjour parfait"):
+    st.info("⏳ L’IA prépare votre séjour...")
 
-st.markdown(
-    """
-    # 🌍 Générateur de séjour parfait (IA)
-
-    Choisissez un **pays** et une **catégorie d’activité**, l’IA se charge du reste ✨  
-    """
-)
-
-# ----------------------------------------------------
-# 4️⃣ Menus déroulants
-# ----------------------------------------------------
-pays_list = sorted(df["PAYS"].dropna().unique())
-selected_pays = st.selectbox("Choisissez un pays :", pays_list)
-
-filtered = df[df["PAYS"] == selected_pays]
-
-categories = sorted(filtered["CATEGORIE"].dropna().unique())
-selected_cat = st.selectbox("Choisissez une catégorie d’activité :", categories)
-
-# ----------------------------------------------------
-# 5️⃣ Fonction IA
-# ----------------------------------------------------
-def generate_itinerary(pays, categorie):
+    # Filtre les lieux correspondants
     lieux = df[(df["PAYS"] == pays) & (df["CATEGORIE"] == categorie)]
 
-    lieux_text = ""
-    for _, row in lieux.iterrows():
-        lieux_text += f"- **{row['NOM_LIEU']}** ({row['VILLE']}), idéal pour : {row['POUR_QUI']}\n"
+    # Convertit les lieux trouvés en texte lisible
+    lieux_text = lieux.to_string(index=False)
 
+    # Prompt IA
     prompt = f"""
-    Tu es un expert du voyage haut de gamme.
-    Crée un **séjour parfait** pour quelqu’un voyageant en **{pays}**, 
-    intéressé par la catégorie **{categorie}**.
+    Tu es une IA experte en voyage.
+    Crée un séjour parfait en {pays} basé sur la catégorie {categorie}.
+    Utilise uniquement les lieux suivants :
 
-    Les lieux disponibles :
-    {liens_text}
+    {lieux_text}
 
-    Format attendu :
-    - Une introduction inspirante
-    - Un plan jour par jour (5 à 7 jours)
-    - Recommandations personnalisées
-    - Suggestions premium
+    Donne un plan clair, structuré, inspirant et agréable à lire.
     """
 
+    # Appel API Groq
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}]
+        model="llama3-8b-8192",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
     )
 
-    return response.choices[0].message.content
+    # Récupération du texte
+    texte = response.choices[0].message["content"]
 
-# ----------------------------------------------------
-# 6️⃣ Bouton : générer le séjour
-# ----------------------------------------------------
-if st.button("✨ Générer mon séjour parfait"):
-    with st.spinner("⏳ L’IA prépare votre séjour..."):
-        try:
-            result = generate_itinerary(selected_pays, selected_cat)
-            st.success("🎉 Séjour généré avec succès !")
-            st.markdown(result)
-        except Exception as e:
-            st.error(f"❌ Erreur API : {e}")
+    st.success("🎉 Voici votre séjour parfait :")
+    st.write(texte)
