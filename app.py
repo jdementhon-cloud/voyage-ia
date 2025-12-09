@@ -6,10 +6,10 @@ from groq import Groq
 df = pd.read_excel("data.xlsx")
 df.columns = df.columns.str.strip()
 
-# --- Client Groq (clé chargée depuis Streamlit Secrets) ---
+# --- Client Groq (clé sécurisée dans Streamlit Cloud) ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- Interface Streamlit ---
+# --- Interface ---
 st.title("🌍 Générateur de séjour parfait (IA)")
 st.write("Choisissez un **pays** et une **catégorie d’activité**, l’IA se charge du reste ✨")
 
@@ -18,36 +18,37 @@ pays = st.selectbox("Choisissez un pays :", sorted(df["PAYS"].unique()))
 categories = sorted(df[df["PAYS"] == pays]["CATEGORIE"].dropna().unique())
 categorie = st.selectbox("Choisissez une catégorie d’activité :", categories)
 
-# --- Bouton ---
+# --- Action ---
 if st.button("✨ Générer mon séjour parfait"):
     st.info("⏳ L’IA prépare votre séjour...")
 
-    # Filtre les lieux correspondants
     lieux = df[(df["PAYS"] == pays) & (df["CATEGORIE"] == categorie)]
 
-    # Convertit les lieux trouvés en texte lisible
-    lieux_text = lieux.to_string(index=False)
+    # 🔥 On réduit les infos envoyées à l’IA pour éviter BadRequest
+    lieux_simplifies = lieux[["NOM_LIEU", "PRIX", "NOTE/5", "IDÉAL POUR"]].head(12)
 
-    # Prompt IA
+    lieux_text = lieux_simplifies.to_string(index=False)
+
     prompt = f"""
     Tu es une IA experte en voyage.
-    Crée un séjour parfait en {pays} basé sur la catégorie {categorie}.
-    Utilise uniquement les lieux suivants :
+    Crée un séjour parfait en {pays} pour la catégorie {categorie}.
 
+    Voici une sélection réduite de lieux à utiliser :
     {lieux_text}
 
-    Donne un plan clair, structuré, inspirant et agréable à lire.
+    Donne un plan clair, structuré, détaillé et inspirationnel.
     """
 
-    # Appel API Groq
-    response = client.chat.completions.create(
-        model="llama3-8b-8192",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
-    )
+    try:
+        response = client.chat.completions.create(
+            model="llama3-8b-instant",   # 🔥 Modèle valide Groq
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
 
-    # Récupération du texte
-    texte = response.choices[0].message["content"]
+        texte = response.choices[0].message["content"]
+        st.success("🎉 Voici votre séjour parfait :")
+        st.write(texte)
 
-    st.success("🎉 Voici votre séjour parfait :")
-    st.write(texte)
+    except Exception as e:
+        st.error(f"Erreur Groq : {e}")
