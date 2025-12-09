@@ -3,117 +3,116 @@ import pandas as pd
 from groq import Groq
 import os
 
-st.title("Générateur de séjour parfait (IA)")
+# =========================
+#  CONFIG GROQ
+# =========================
 
-# ============================
-#   CHARGEMENT FICHIER
-# ============================
-try:
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]  # depuis Streamlit Cloud
+client = Groq(api_key=GROQ_API_KEY)
+
+# =========================
+#  CHARGEMENT DU FICHIER EXCEL
+# =========================
+
+@st.cache_data
+def load_data():
     df = pd.read_excel("data.xlsx")
-except Exception as e:
-    st.error(f"Erreur lors du chargement du fichier : {e}")
-    st.stop()
+
+    # Normalisation colonnes
+    df.columns = (
+        df.columns.str.lower()
+        .str.strip()
+        .str.replace(" ", "_")
+        .str.replace("'", "")
+        .str.replace("/", "")
+    )
+    return df
+
+df = load_data()
+
+# =========================
+#  AFFICHAGE DES COLONNES
+# =========================
+
+st.title("Test Application Voyage – Version Simple")
 
 st.subheader("Colonnes détectées :")
-st.write(list(df.columns))
+st.json(list(df.columns))
 
-# Normalisation
-df.columns = (
-    df.columns
-    .str.lower()
-    .str.replace(" ", "_")
-    .str.replace("é", "e")
-    .str.replace("'", "")
-)
+# =========================
+#  SÉLECTEURS
+# =========================
 
-st.subheader("Colonnes après normalisation :")
-st.write(list(df.columns))
+pays_list = sorted(df["pays"].dropna().unique())
+categorie_list = sorted(df["categorie"].dropna().unique())
 
-# ============================
-#   SELECTBOX PAYS
-# ============================
-pays = st.selectbox(
-    "🌍 Choisissez un pays :",
-    sorted(df["pays"].dropna().unique())
-)
+pays = st.selectbox("🌍 Choisissez un pays :", pays_list)
+categorie = st.selectbox("🍽️ Choisissez une catégorie d’activité :", categorie_list)
 
-# ============================
-#   SELECTBOX CATEGORIE
-# ============================
-categories = sorted(df[df["pays"] == pays]["categorie"].dropna().unique())
-categorie = st.selectbox(
-    "🍽️ Choisissez une catégorie d’activité :",
-    categories
-)
-
-# Filtrer le tableau
+# Filtrage après sélection
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
 st.subheader("Lieux sélectionnés :")
-if lieux.empty:
-    st.warning("Aucun résultat trouvé.")
-    st.stop()
-else:
-    st.dataframe(lieux)
+st.write(lieux)
 
-# ============================
-#    FONCTION PROMPT
-# ============================
-def construire_prompt(pays, categorie, lieux):
-    texte = ""
+# =========================
+#  FONCTION PROMPT
+# =========================
+
+def generer_prompt(pays, categorie, lieux):
+    texte_lieux = ""
 
     for _, row in lieux.iterrows():
-        nom = row.get("nom_lieu", "")
-        prix = row.get("prix", "")
-        note = row.get("note_5", "")        # <-- CORRECTION ICI
-        ideal = row.get("ideal_pour", "")
-        url = row.get("url_reservation", "")
-
-        texte += f"- {nom} | {prix}€ | ⭐ {note}/5 | Idéal pour : {ideal} | Réserver : {url}\n"
+        texte_lieux += (
+            f"- {row['nom_lieu']} | "
+            f"Prix : {row['prix']}€ | "
+            f"⭐ {row['note5']}/5 | "
+            f"Idéal pour : {row['ideal_pour']} | "
+            f"Réservation : {row['url_reservation']}\n"
+        )
 
     prompt = f"""
 Tu es un expert en voyages.
 
-Produit un séjour parfait de 3 jours à {pays}.
-La catégorie choisie est : {categorie}.
+Crée un **séjour parfait de 3 jours** à **{pays}**, 
+centré sur la catégorie : **{categorie}**.
 
-Liste des lieux recommandés :
-{texte}
+Voici une liste des meilleurs lieux :
 
-Ton output doit inclure :
-- Un plan jour par jour
-- Les raisons des choix
-- Des conseils utiles
-- Un ton inspirant et premium
+{texte_lieux}
+
+Format attendu :
+- 🗓️ Programme détaillé jour par jour
+- ✨ Explication de pourquoi ces lieux sont incroyables
+- 💡 Astuces pratiques
+- 🔗 Liens de réservation déjà fournis
+
+Reste clair, inspirant, et efficace.
 """
     return prompt
 
-
-# ============================
-#   API GROQ
-# ============================
-if "GROQ_API_KEY" not in st.secrets:
-    st.error("⚠️ GROQ_API_KEY manquante dans Streamlit Cloud.")
-    st.stop()
-
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+# =========================
+#  GENERATION DU SEJOUR
+# =========================
 
 def generer_sejour(prompt):
     response = client.chat.completions.create(
-        model="deepseek-r1-distill-qwen-32b",
+        model="llama-3.1-70b-versatile",   # modèle Groq PREMIUM qui marche
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1200,
     )
     return response.choices[0].message["content"]
 
+# =========================
+#  BOUTON
+# =========================
 
-# ============================
-#   BOUTON IA
-# ============================
 if st.button("✨ Générer mon séjour parfait"):
-    with st.spinner("L’IA prépare votre séjour…"):
-        prompt = construire_prompt(pays, categorie, lieux)
+    if len(lieux) == 0:
+        st.error("Aucun lieu trouvé pour cette combinaison.")
+    else:
+        st.info("⏳ L’IA prépare votre séjour...")
+        prompt = generer_prompt(pays, categorie, lieux)
         resultat = generer_sejour(prompt)
-
-    st.subheader("🧳 Séjour généré par l’IA :")
-    st.write(resultat)
+        st.success("🎉 Séjour généré avec succès !")
+        st.write(resultat)
