@@ -2,79 +2,64 @@ import streamlit as st
 import pandas as pd
 from groq import Groq
 
-# -------------------------------------------------------------
-# 🎨 CONFIG – Branding ATLAS
-# -------------------------------------------------------------
-st.set_page_config(page_title="ATLAS – Voyage IA", layout="wide")
+# -----------------------------------
+# CONFIG
+# -----------------------------------
+st.set_page_config(page_title="ATLAS — Voyage IA", layout="wide")
 
-# CSS personnalisé
+# STYLE CSS PERSONNALISÉ
 st.markdown("""
-    <style>
-        body {
-            background-color: #F7F7FB;
-        }
-
-        .main-title {
-            font-size: 64px !important;
-            font-weight: 900 !important;
-            text-align: center;
-            color: #1A237E;
-            letter-spacing: 4px;
-            margin-top: -30px;
-        }
-
-        .subtitle {
-            text-align: center;
-            margin-top: -20px;
-            font-size: 20px;
-            color: #424242;
-            font-weight: 400;
-        }
-
-        .atlas-card {
-            background: white;
-            padding: 25px;
-            border-radius: 14px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-        }
-
-        .stButton>button {
-            background: linear-gradient(90deg, #4C57FF, #6C6CFF);
-            color: white;
-            border: none;
-            padding: 14px 26px;
-            font-size: 18px;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: 0.3s;
-        }
-
-        .stButton>button:hover {
-            background: linear-gradient(90deg, #313BFF, #5A5AFF);
-            transform: scale(1.03);
-        }
-
-        .result-box {
-            background: #EEF1FF;
-            padding: 25px;
-            border-radius: 12px;
-            border-left: 6px solid #4C57FF;
-            margin-top: 25px;
-            font-size: 18px;
-            line-height: 1.6;
-        }
-    </style>
+<style>
+body {
+    background-color: #f5f6fa;
+}
+.title-atlas {
+    font-size: 60px;
+    font-weight: 800;
+    text-align: center;
+    color: #1e1e1e;
+    margin-bottom: -10px;
+}
+.subtitle-atlas {
+    font-size: 22px;
+    text-align: center;
+    color: #555;
+    margin-bottom: 40px;
+}
+.stButton>button {
+    background: linear-gradient(90deg, #6a5af9, #805af9);
+    color: white;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 18px;
+    border: none;
+}
+.stButton>button:hover {
+    background: linear-gradient(90deg, #5847e8, #6e47e8);
+    color: white;
+}
+.result-box {
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    border-left: 6px solid #6a5af9;
+    margin-top: 20px;
+}
+</style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='main-title'>ATLAS</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Votre créateur intelligent de séjours parfaits</div>", unsafe_allow_html=True)
-st.write("")
+
+# -----------------------------------
+# TITRE ATLAS
+# -----------------------------------
+st.markdown("<div class='title-atlas'>ATLAS</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle-atlas'>Créateur d’itinéraires personnalisés grâce à l’IA</div>",
+            unsafe_allow_html=True)
 
 
-# -------------------------------------------------------------
-# 📂 LOAD DATA
-# -------------------------------------------------------------
+# -----------------------------------
+# LOAD DATA
+# -----------------------------------
 @st.cache_data
 def load_data():
     df = pd.read_excel("data.xlsx")
@@ -89,33 +74,30 @@ def load_data():
 
 df = load_data()
 
-note_cols = [c for c in df.columns if "note" in c or "5" in c]
-note_col = note_cols[0] if note_cols else None
+# Trouver automatiquement la colonne 'note'
+note_col_candidates = [c for c in df.columns if "note" in c]
+note_col = note_col_candidates[0] if note_col_candidates else None
 
 
-# -------------------------------------------------------------
-# 🧭 SELECTION ZONE
-# -------------------------------------------------------------
-st.markdown("<div class='atlas-card'>", unsafe_allow_html=True)
-
-pays = st.selectbox("🌍 Sélectionnez une destination :", sorted(df["pays"].unique()))
+# -----------------------------------
+# UI — CHOIX UTILISATEUR
+# -----------------------------------
+pays = st.selectbox("🌍 Choisissez une destination :", sorted(df["pays"].unique()))
 
 categories = sorted(df[df["pays"] == pays]["categorie"].unique())
-categorie = st.selectbox("🎨 Choisissez un type d’expérience :", categories)
+categorie = st.selectbox("🍀 Sélectionnez une catégorie d’activité :", categories)
 
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
 if lieux.empty:
-    st.error("❌ Aucun lieu trouvé pour cette combinaison.")
+    st.error("❌ Aucun lieu trouvé pour cette destination et catégorie.")
 else:
-    st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s) ✔️")
-
-st.markdown("</div>", unsafe_allow_html=True)
+    st.success(f"🔎 {len(lieux)} lieu(x) disponible(s)")
 
 
-# -------------------------------------------------------------
-# 🧠 PROMPT BUILDER
-# -------------------------------------------------------------
+# -----------------------------------
+# PROMPT BUILDER
+# -----------------------------------
 def construire_prompt(pays, categorie, lieux):
     texte = ""
 
@@ -128,37 +110,39 @@ def construire_prompt(pays, categorie, lieux):
         )
 
     prompt = f"""
-Tu es un expert en organisation de voyages premium.
+Tu es un expert du voyage haut de gamme.
 
-Crée un **itinéraire réel de 3 jours** à **{pays}**, sur le thème **{categorie}**, avec :
+Génère un **itinéraire inspirant et détaillé de 3 jours** à **{pays}**, 
+spécialement centré sur l’activité **{categorie}**.
 
-### 🎯 OBJECTIFS
-- Une structure claire : Jour 1, Jour 2, Jour 3  
-- Chaque jour doit inclure **au moins un des lieux listés**
-- Récit élégant, inspirant, fluide et réaliste  
-- Conseils pratiques (horaires, durée, déplacement)  
-- Mise en contexte culturelle ou sensorielle  
-- Lien de réservation intégré dans la partie du lieu  
-
-### 📍 LIEUX À INTÉGRER
+### Lieux à intégrer obligatoirement :
 {texte}
 
-### 📦 FORMAT FINAL
-- Paragraphes immersifs
-- Programme précis et optimisé
-- Bloc final :  
-### 🔗 Liens de réservation
-+ liste des liens fournis
+### Format attendu :
 
-Rédige tout en français.
+**Jour 1 :**  
+- activités détaillées  
+- intégration d’un des lieux fournis  
+- conseils pratiques (durée, transport, horaires)
+
+**Jour 2 :** idem
+
+**Jour 3 :** idem
+
+### À la fin :
+Créer un bloc :
+
+### 🔗 Liens de réservation  
+- Liste tous les liens fournis
+
+Style premium, immersif, clair, inspirant.
 """
-
     return prompt
 
 
-# -------------------------------------------------------------
-# 🤖 IA CALL
-# -------------------------------------------------------------
+# -----------------------------------
+# IA CALL
+# -----------------------------------
 def generer_sejour(prompt):
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -166,32 +150,29 @@ def generer_sejour(prompt):
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Tu es un expert en voyages de luxe."},
+                {"role": "system", "content": "Tu es un expert en création de voyages sur mesure."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.65,
-            max_tokens=1600,
+            temperature=0.7,
+            max_tokens=1500,
         )
 
+        # Important : accès correct au contenu
         return completion.choices[0].message.content
 
     except Exception as e:
         return f"❌ Erreur API : {e}"
 
 
-# -------------------------------------------------------------
-# 🚀 GENERATE BUTTON
-# -------------------------------------------------------------
-st.markdown("<div class='atlas-card'>", unsafe_allow_html=True)
-
-if st.button("✨ Générer mon séjour parfait", use_container_width=True):
-    with st.spinner("🧭 ATLAS construit votre itinéraire..."):
-        prompt = construir e_prompt(pays, categorie, lieux)
+# -----------------------------------
+# BOUTON
+# -----------------------------------
+if st.button("✨ Générer mon séjour parfait"):
+    with st.spinner("🧭 ATLAS prépare votre itinéraire sur mesure…"):
+        prompt = construire_prompt(pays, categorie, lieux)
         resultat = generer_sejour(prompt)
 
     st.markdown("<div class='result-box'>", unsafe_allow_html=True)
-    st.markdown("### 🧳 Votre séjour personnalisé par ATLAS :")
+    st.markdown("### 🎉 Votre séjour personnalisé :")
     st.markdown(resultat)
     st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True)
