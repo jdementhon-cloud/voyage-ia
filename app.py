@@ -78,7 +78,7 @@ def load_data():
 
 df = load_data()
 
-# Dev helper (désactiver en prod si tu veux)
+# Helper debug (optionnel)
 with st.expander("🔍 Colonnes détectées :", expanded=False):
     st.write(list(df.columns))
 
@@ -124,7 +124,6 @@ if lieux.empty:
     st.stop()
 else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s) pour ce combo.")
-
 
 # ======================================================
 # AFFICHAGE DES LIEUX (AVEC IMAGES)
@@ -173,11 +172,11 @@ def construire_prompt(pays: str, categorie: str, lieux_df: pd.DataFrame) -> str:
     for _, row in lieux_df.iterrows():
         texte += f"- **{row['nom_lieu']}** à **{row['ville']}**\n"
         if note_col and pd.notna(row[note_col]):
-            texte += f"  ⭐ Note : {row[note_col]}/5\n"
+            texte += f"  Note : {row[note_col]}/5\n"
         if "ideal_pour" in lieux_df.columns and pd.notna(row.get("ideal_pour", None)):
-            texte += f"  🎯 Idéal pour : {row['ideal_pour']}\n"
+            texte += f"  Ideal pour : {row['ideal_pour']}\n"
         if pd.notna(row["url_reservation"]):
-            texte += f"  🔗 Réservation : {row['url_reservation']}\n"
+            texte += f"  Lien de reservation : {row['url_reservation']}\n"
         texte += "\n"
 
     prompt = f"""
@@ -191,16 +190,14 @@ Crée un **itinéraire complet et réaliste de 3 jours** à **{pays}**, centré 
 
 ### FORMAT ATTENDU :
 
-- **Jour 1 :** programme détaillé (matin, après-midi, soir), avec au moins un des lieux ci-dessus
-- **Jour 2 :** programme détaillé avec au moins un des lieux
-- **Jour 3 :** programme détaillé avec au moins un des lieux
+- Jour 1 : programme détaillé (matin, après-midi, soir), avec au moins un des lieux ci-dessus
+- Jour 2 : programme détaillé avec au moins un des lieux
+- Jour 3 : programme détaillé avec au moins un des lieux
 - Pour chaque jour, explique pourquoi les lieux choisis sont intéressants
 - Ajoute des conseils pratiques (horaires, durée, ambiance, type de public)
 - Termine par une section :
 
-### 🔗 Liens de réservation recommandés
-
-Liste simplement l’ensemble des liens de réservation fournis, sous forme de liste à puces.
+Liens de reservation recommends (reprends les liens fournis).
 
 Style chaleureux, inspirant, premium, clair et structuré.
 """
@@ -231,41 +228,45 @@ def generer_sejour(prompt: str) -> str:
         return completion.choices[0].message.content
 
     except Exception as e:
-        return f"❌ Erreur API : {e}"
+        return f"Erreur API : {e}"
 
 
 # ======================================================
-# OUTIL : NETTOYAGE POUR LE PDF
+# OUTILS PDF – VERSION SÉCURISÉE (SANS UNICODE)
 # ======================================================
-def nettoyer_texte_pdf(texte: str) -> str:
+def to_latin1(text: str) -> str:
     """
-    FPDF ne gère pas l'UTF-8 par défaut, on convertit donc en latin-1,
-    en remplaçant les caractères non compatibles.
+    FPDF ne supporte que latin-1.
+    On enlève donc tous les caractères non compatibles (emojis, etc.).
     """
-    return texte.encode("latin-1", "replace").decode("latin-1")
+    if text is None:
+        return ""
+    return text.encode("latin-1", "ignore").decode("latin-1")
 
 
 def creer_pdf(contenu: str, titre: str) -> bytes:
-    """Crée un PDF en mémoire à partir du texte généré."""
+    """Crée un PDF en mémoire à partir du texte généré (latin-1 only)."""
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    pdf.set_title(titre)
+
+    titre_safe = to_latin1(titre)
+    contenu_safe = to_latin1(contenu)
+
+    pdf.set_title(titre_safe)
 
     # Titre
     pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, nettoyer_texte_pdf(titre), ln=True)
+    pdf.cell(0, 10, titre_safe, ln=True)
     pdf.ln(4)
 
     # Corps
     pdf.set_font("Helvetica", "", 11)
-    texte = nettoyer_texte_pdf(contenu)
-
-    for line in texte.split("\n"):
+    for line in contenu_safe.split("\n"):
         pdf.multi_cell(0, 6, line)
 
-    pdf_bytes = pdf.output(dest="S").encode("latin-1")
-    return pdf_bytes
+    # Retour en bytes
+    return pdf.output(dest="S").encode("latin-1", "ignore")
 
 
 # ======================================================
@@ -277,7 +278,11 @@ if "atlas_resultat" not in st.session_state:
 
 st.markdown("### ✨ Génération du séjour")
 
-generer = st.button("✨ Générer mon séjour parfait", use_container_width=True, type="primary")
+generer = st.button(
+    "✨ Générer mon séjour parfait",
+    use_container_width=True,
+    type="primary",
+)
 
 if generer:
     with st.spinner("🤖 ATLAS prépare ton itinéraire sur-mesure…"):
@@ -286,7 +291,7 @@ if generer:
 
     st.session_state["atlas_resultat"] = resultat
 
-    # On prépare aussi un texte consolidé pour le PDF
+    # Texte à injecter dans le PDF (sans emojis)
     liens_txt = ""
     for _, row in lieux.iterrows():
         if pd.notna(row["url_reservation"]):
@@ -296,7 +301,7 @@ if generer:
         f"ATLAS – Séjour à {pays} ({categorie})\n\n"
         + resultat
         + "\n\n-----------------------------\n"
-        + "🔗 Liens de réservation issus de la base :\n"
+        + "Liens de reservation issus de la base :\n"
         + liens_txt
     )
     st.session_state["atlas_texte_pdf"] = texte_pdf
@@ -307,12 +312,7 @@ if generer:
 if st.session_state["atlas_resultat"]:
     st.markdown("### 🧳 Votre séjour personnalisé")
 
-    st.markdown(
-        """
-        <div class="atlas-card">
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="atlas-card">', unsafe_allow_html=True)
     st.markdown(st.session_state["atlas_resultat"])
     st.markdown("</div>", unsafe_allow_html=True)
 
