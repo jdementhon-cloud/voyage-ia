@@ -1,33 +1,38 @@
 import streamlit as st
 import pandas as pd
 from groq import Groq
+import base64
+import io
+import re
 from fpdf import FPDF
 
-# ============================================================
-# CONFIGURATION GÉNÉRALE
-# ============================================================
-st.set_page_config(page_title="ATLAS – Générateur de Séjour", layout="wide")
+# ----------------------------------------------------
+# CONFIGURATION GÉNÉRALE DE L’APPLICATION
+# ----------------------------------------------------
+st.set_page_config(page_title="ATLAS – Générateur de séjour", layout="wide")
 
 st.markdown("""
 <style>
-    .main {background-color: #fafafa;}
-    h1 {font-size: 3rem; font-weight: 700; color: #222;}
-    .stButton>button {
-        background-color:#4b6ef5;
-        color:white;
-        border-radius:8px;
-        padding:12px 25px;
-        font-size:1.1rem;
-    }
+h1 {
+    text-align: center;
+    font-size: 3rem !important;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+.stButton > button {
+    width: 100%;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    padding: 14px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🌍 **ATLAS – Créateur de séjours personnalisés**")
+st.title("🌍 ATLAS – Créateur de séjours inspirants")
 
-
-# ============================================================
-# CHARGEMENT DATA
-# ============================================================
+# ----------------------------------------------------
+# CHARGEMENT DES DONNÉES
+# ----------------------------------------------------
 @st.cache_data
 def load_data():
     df = pd.read_excel("data.xlsx")
@@ -41,32 +46,52 @@ def load_data():
     return df
 
 df = load_data()
-
-note_col = [c for c in df.columns if "note" in c or "5" in c][0]
-
-
-# ============================================================
-# SÉLECTIONS UTILISATEUR
-# ============================================================
-pays = st.selectbox("🌎 Choisissez un pays :", sorted(df["pays"].unique()))
-
-categories = sorted(df[df["pays"] == pays]["categorie"].unique())
-categorie = st.selectbox("🎨 Choisissez une catégorie d’activité :", categories)
-
-lieux_df = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
-
-if lieux_df.empty:
-    st.error("Aucun lieu trouvé pour cette combinaison.")
-else:
-    st.success(f"{len(lieux_df)} lieu(x) trouvé(s) ✔")
+note_col = [c for c in df.columns if "note" in c][0]
 
 
-# ============================================================
+# ----------------------------------------------------
+# FONCTIONS UTILITAIRES
+# ----------------------------------------------------
+
+# 🔵 Retirer images Markdown avant PDF
+def retirer_images_markdown(texte: str) -> str:
+    return re.sub(r'!\[.*?\]\(.*?\)', '', texte)
+
+# 🔵 Afficher images dans Streamlit
+def afficher_images_streamlit(texte: str):
+    images = re.findall(r'!\[.*?\]\((.*?)\)', texte)
+    if images:
+        st.subheader("📸 Images associées")
+        for url in images:
+            st.image(url, use_column_width=True)
+
+# 🔵 Création du PDF propre
+def creer_pdf(texte, titre="ATLAS – Séjour"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Titre
+    pdf.set_font("Arial", "B", 20)
+    pdf.cell(0, 15, titre, ln=True)
+
+    # Contenu safe
+    pdf.set_font("Arial", size=12)
+    ligne_safe = texte.replace("•", "-").replace("\t", " ")
+
+    for line in ligne_safe.split("\n"):
+        pdf.multi_cell(0, 8, line)
+
+    pdf_bytes = pdf.output(dest="S").encode("latin-1", errors="ignore")
+    return pdf_bytes
+
+
+# ----------------------------------------------------
 # PROMPT IA
-# ============================================================
-def construire_prompt(pays, categorie, lieux_df):
+# ----------------------------------------------------
+def construire_prompt(pays, categorie, lieux):
     texte = ""
-    for _, row in lieux_df.iterrows():
+    for _, row in lieux.iterrows():
         texte += (
             f"- **{row['nom_lieu']}** ({row['ville']})\n"
             f"  ⭐ Note : {row[note_col]}/5\n"
@@ -74,118 +99,102 @@ def construire_prompt(pays, categorie, lieux_df):
             f"  🔗 Réservation : {row['url_reservation']}\n\n"
         )
 
-    return f"""
-Tu es un expert mondial en création de séjours haut de gamme.
+    prompt = f"""
+Tu es un expert en organisation de voyages premium.
 
-Crée un **itinéraire complet de 3 jours** pour un voyage à **{pays}**.
-Catégorie d’activité : **{categorie}**.
+Crée un **itinéraire réaliste et inspirant de 3 jours** à **{pays}**, dans la catégorie **{categorie}**.
 
-Voici les lieux que tu dois absolument intégrer au fil des journées :
+### Voici les lieux que tu dois ABSOLUMENT intégrer :
 
 {texte}
 
-FORMAT ATTENDU :
-- Itinéraire détaillé jour par jour
-- Intégration cohérente des lieux fournis
-- Conseils d’organisation, horaires, ambiance
-- Un paragraphe final : **Liens de réservation**
+### FORMAT DEMANDÉ :
+- Jour 1 : programme clair
+- Jour 2 : programme clair
+- Jour 3 : programme clair
+- Chaque jour doit intégrer au moins un lieu listé
+- Ajouter conseils pratiques + horaires + ambiance
+- En fin de texte, ajoute un bloc :
+
+### 🔗 Liens de réservation
+
+Style premium, fluide, inspirant.
 """
+    return prompt
 
 
-# ============================================================
-# NETTOYAGE TEXTE POUR PDF
-# ============================================================
-def nettoyer_ligne(ligne: str) -> str:
-    if not ligne:
-        return ""
-
-    ligne = ligne.encode("latin-1", "ignore").decode("latin-1")
-
-    invisibles = [
-        "\u202f", "\u2007", "\u2009", "\u200A", "\u200B",
-        "\u2060", "\u00A0", "\u2028", "\u2029"
-    ]
-    for c in invisibles:
-        ligne = ligne.replace(c, " ")
-
-    ligne = ligne.replace("–", "-").replace("—", "-")
-
-    return ligne.strip()
-
-
-def creer_pdf(contenu: str, titre: str) -> bytes:
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-
-    titre_safe = nettoyer_ligne(titre)
-    contenu_lignes = contenu.split("\n")
-
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, titre_safe, ln=True)
-    pdf.ln(4)
-
-    pdf.set_font("Helvetica", "", 11)
-
-    for ligne in contenu_lignes:
-        propre = nettoyer_ligne(ligne)
-        if not propre:
-            pdf.ln(2)
-            continue
-        pdf.multi_cell(0, 6, propre)
-
-    return pdf.output(dest="S").encode("latin-1", "ignore")
-
-
-# ============================================================
-# IA – GROQ
-# ============================================================
+# ----------------------------------------------------
+# APPEL À L’IA (GROQ)
+# ----------------------------------------------------
 def generer_sejour(prompt):
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "Tu es un expert en voyages de luxe."},
+                {"role": "system", "content": "Tu es un expert en voyages premium."},
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=1600,
             temperature=0.7,
+            max_tokens=1600,
         )
+
         return completion.choices[0].message.content
 
     except Exception as e:
-        return f"❌ Erreur IA : {e}"
+        return f"❌ Erreur API : {e}"
 
 
-# ============================================================
-# ACTION : GÉNERATION
-# ============================================================
-if st.button("✨ Générer mon séjour parfait"):
+# ----------------------------------------------------
+# INTERFACE UTILISATEUR
+# ----------------------------------------------------
+pays = st.selectbox("🌐 Choisissez un pays :", sorted(df["pays"].unique()))
+categories = sorted(df[df["pays"] == pays]["categorie"].unique())
+categorie = st.selectbox("🍀 Choisissez une catégorie d’activité :", categories)
 
-    with st.spinner("✈️ ATLAS prépare votre itinéraire..."):
-        prompt = construire_prompt(pays, categorie, lieux_df)
+lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
+
+if lieux.empty:
+    st.error("Aucun lieu trouvé.")
+else:
+    st.success(f"{len(lieux)} lieu(x) trouvé(s) ✔️")
+
+
+# ----------------------------------------------------
+# BOUTON DE GÉNÉRATION IA
+# ----------------------------------------------------
+if st.button("✨ Générer mon séjour parfait", type="primary"):
+
+    with st.spinner("🧭 Création de votre itinéraire…"):
+        prompt = construire_prompt(pays, categorie, lieux)
         resultat = generer_sejour(prompt)
 
     st.session_state["atlas_resultat"] = resultat
-    st.markdown("### 🎉 Votre séjour personnalisé :")
+
+    st.success("🎉 Séjour généré avec succès !")
     st.markdown(resultat)
+    afficher_images_streamlit(resultat)
 
 
-# ============================================================
-# EXPORT PDF
-# ============================================================
+# ----------------------------------------------------
+# BLOC EXPORT PDF
+# ----------------------------------------------------
+st.subheader("📄 Exporter")
+
 if "atlas_resultat" in st.session_state:
-    st.subheader("📄 Exporter")
 
-    if st.button("📥 Télécharger en PDF"):
-        pdf_bytes = creer_pdf(
-            st.session_state["atlas_resultat"],
-            f"ATLAS – Séjour {pays}"
-        )
-        st.download_button(
-            "Télécharger le PDF",
-            data=pdf_bytes,
-            file_name="sejour_atlas.pdf",
-            mime="application/pdf"
-        )
+    # Nettoyage automatique pour PDF
+    texte_pdf = retirer_images_markdown(st.session_state["atlas_resultat"])
+
+    fichier_pdf = creer_pdf(texte_pdf, f"ATLAS – Séjour {pays}")
+
+    st.download_button(
+        label="📥 Télécharger le PDF",
+        data=fichier_pdf,
+        file_name=f"ATLAS_Sejour_{pays}.pdf",
+        mime="application/pdf"
+    )
+
+else:
+    st.info("Générez d'abord un séjour pour pouvoir exporter en PDF.")
