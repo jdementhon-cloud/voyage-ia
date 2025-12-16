@@ -1,5 +1,7 @@
-pandas
 streamlit
+pandas
+openpyxl
 groq
 fpdf2
-openpyxl
+unidecode
+folium
