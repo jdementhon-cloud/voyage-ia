@@ -1,157 +1,182 @@
 import streamlit as st
 import pandas as pd
 from groq import Groq
-from fpdf import FPDF
-from unidecode import unidecode
-import folium
-from streamlit.components.v1 import html
 
-# =====================================================
+# --------------------------------------------------
 # CONFIG
-# =====================================================
-st.set_page_config(page_title="ATLAS", layout="wide")
+# --------------------------------------------------
+st.set_page_config(
+    page_title="ATLAS – Générateur de séjour",
+    layout="wide",
+)
 
-st.markdown("""
-<style>
-body { background-color: #050816; color: #f5f5f5; }
-.atlas-title {
-    font-size: 3.2rem;
-    font-weight: 900;
-    background: linear-gradient(90deg, #facc15, #ec4899, #38bdf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.atlas-sub { color: #cbd5f5; margin-bottom: 1.5rem; }
-.card {
-    background: #020617;
-    padding: 1rem;
-    border-radius: 16px;
-    border: 1px solid #1e293b;
-}
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.6rem;
-    background: rgba(148,163,184,0.2);
-    border-radius: 999px;
-    font-size: 0.8rem;
-    margin-right: 0.3rem;
-}
-a { color: #38bdf8 !important; }
-</style>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+    .atlas-title {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 0.2rem;
+        background: linear-gradient(90deg, #6366f1, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .atlas-subtitle {
+        color: #6b7280;
+        margin-bottom: 2rem;
+    }
+    .lieu-card {
+        background: #0f172a;
+        border-radius: 14px;
+        padding: 1rem;
+        border: 1px solid #1e293b;
+        height: 100%;
+    }
+    .lieu-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+        margin-top: 0.5rem;
+    }
+    .lieu-city {
+        font-size: 0.9rem;
+        color: #9ca3af;
+        margin-bottom: 0.4rem;
+    }
+    a {
+        color: #38bdf8;
+        text-decoration: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
+# --------------------------------------------------
+# HEADER
+# --------------------------------------------------
 st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
-st.markdown('<div class="atlas-sub">Itinéraires intelligents & expériences sur-mesure</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="atlas-subtitle">Crée un séjour sur-mesure, inspirant et concret.</div>',
+    unsafe_allow_html=True,
+)
 
-# =====================================================
-# DATA
-# =====================================================
+# --------------------------------------------------
+# LOAD DATA
+# --------------------------------------------------
 @st.cache_data
 def load_data():
     df = pd.read_excel("data.xlsx")
     df.columns = (
-        df.columns.str.lower()
+        df.columns.str.strip()
+        .str.lower()
         .str.replace(" ", "_")
-        .str.replace("/", "_")
         .str.replace("-", "_")
+        .str.replace("/", "_")
     )
     return df
 
+
 df = load_data()
 
-note_col = next((c for c in df.columns if "note" in c), None)
-image_col = next((c for c in df.columns if "image" in c or "photo" in c), None)
+# Colonnes utiles
+image_col = None
+for c in ["image_url", "lien_images", "photo", "image"]:
+    if c in df.columns:
+        image_col = c
+        break
 
-# =====================================================
-# SELECTEURS
-# =====================================================
-pays = st.selectbox("🌍 Pays", sorted(df["pays"].unique()))
-categories = sorted(df[df["pays"] == pays]["categorie"].unique())
-categorie = st.selectbox("🎯 Catégorie", categories)
+note_col = next((c for c in df.columns if "note" in c), None)
+
+# --------------------------------------------------
+# UI – SELECTEURS
+# --------------------------------------------------
+col1, col2 = st.columns(2)
+
+with col1:
+    pays = st.selectbox("🌍 Choisissez un pays", sorted(df["pays"].unique()))
+
+with col2:
+    categories = sorted(df[df["pays"] == pays]["categorie"].unique())
+    categorie = st.selectbox("🎯 Choisissez une catégorie", categories)
 
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
 if lieux.empty:
-    st.error("Aucun lieu trouvé.")
-    st.stop()
-
-st.success(f"{len(lieux)} lieu(x) trouvé(s)")
-
-# =====================================================
-# CARTE GLOBALE
-# =====================================================
-st.markdown("## 🗺️ Carte des lieux")
-
-if {"latitude", "longitude"}.issubset(lieux.columns):
-    m = folium.Map(
-        location=[
-            lieux["latitude"].mean(),
-            lieux["longitude"].mean()
-        ],
-        zoom_start=11
-    )
-    for _, r in lieux.iterrows():
-        folium.Marker(
-            [r["latitude"], r["longitude"]],
-            popup=f"{r['nom_lieu']} – {r['ville']}"
-        ).add_to(m)
-
-    html(m._repr_html_(), height=420)
+    st.warning("Aucun lieu trouvé pour cette sélection.")
 else:
-    st.info("Coordonnées GPS manquantes")
+    st.success(f"{len(lieux)} lieu(x) trouvé(s)")
 
-# =====================================================
-# CARTES LIEUX
-# =====================================================
-st.markdown("## 📍 Lieux")
+# --------------------------------------------------
+# AFFICHAGE DES LIEUX (PHOTOS + INFOS)
+# --------------------------------------------------
+st.markdown("### 📍 Lieux disponibles")
 
 cols = st.columns(3)
-for i, (_, r) in enumerate(lieux.iterrows()):
+for i, (_, row) in enumerate(lieux.iterrows()):
     with cols[i % 3]:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown('<div class="lieu-card">', unsafe_allow_html=True)
 
-        if image_col and pd.notna(r[image_col]):
-            st.image(r[image_col], use_column_width=True)
+        if image_col and pd.notna(row.get(image_col)):
+            st.image(row[image_col], use_column_width=True)
 
-        st.markdown(f"### {r['nom_lieu']}")
-        st.caption(r["ville"])
+        st.markdown(
+            f'<div class="lieu-title">{row.get("nom_lieu","Lieu")}</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="lieu-city">{row.get("ville","")}</div>',
+            unsafe_allow_html=True,
+        )
 
-        if note_col:
-            st.markdown(f"<span class='badge'>⭐ {r[note_col]}/5</span>", unsafe_allow_html=True)
-        if pd.notna(r.get("ideal_pour", None)):
-            st.markdown(f"<span class='badge'>🎯 {r['ideal_pour']}</span>", unsafe_allow_html=True)
+        if note_col and pd.notna(row.get(note_col)):
+            st.markdown(f"⭐ {row[note_col]}/5")
 
-        if pd.notna(r.get("url_reservation", None)):
-            st.markdown(f"[🔗 Réserver]({r['url_reservation']})")
+        if pd.notna(row.get("ideal_pour", None)):
+            st.markdown(f"🎯 {row['ideal_pour']}")
+
+        if pd.notna(row.get("url_reservation", None)):
+            st.markdown(
+                f"[🔗 Voir / réserver]({row['url_reservation']})",
+                unsafe_allow_html=True,
+            )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-# =====================================================
-# PROMPT
-# =====================================================
-def build_prompt():
-    texte = ""
-    for _, r in lieux.iterrows():
-        texte += f"- {r['nom_lieu']} ({r['ville']})\n"
+# --------------------------------------------------
+# PROMPT IA
+# --------------------------------------------------
+def construire_prompt(pays, categorie, lieux_df):
+    description = ""
+    for _, row in lieux_df.iterrows():
+        description += (
+            f"- {row.get('nom_lieu')} ({row.get('ville')})\n"
+            f"  Réservation : {row.get('url_reservation','')}\n"
+        )
 
     return f"""
-Tu es un expert voyage.
+Tu es un expert en organisation de voyages.
 
-Crée un itinéraire **sur 3 jours** à **{pays}**, catégorie **{categorie}**.
+Crée un **itinéraire détaillé de 3 jours** à **{pays}**,
+autour de la thématique **{categorie}**.
 
-Lieux disponibles :
-{texte}
+Voici les lieux à intégrer dans l’itinéraire :
+
+{description}
 
 Contraintes :
-- Chaque jour doit inclure au moins un lieu
-- Ton fluide, premium
-- Conseils pratiques
+- Chaque jour doit inclure au moins un des lieux listés
+- Indique clairement les journées (Jour 1, Jour 2, Jour 3)
+- Intègre naturellement les lieux dans le récit
+- Donne des conseils pratiques (rythme, moment de la journée)
+- À la fin, fais une section **🔗 Liens de réservation** listant tous les liens
+
+Ton style doit être clair, inspirant et concret.
 """
 
-# =====================================================
-# IA
-# =====================================================
-def generate_itinerary(prompt):
+# --------------------------------------------------
+# APPEL IA
+# --------------------------------------------------
+def generer_sejour(prompt):
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
     completion = client.chat.completions.create(
         model="llama-3.1-8b-instant",
@@ -159,48 +184,26 @@ def generate_itinerary(prompt):
             {"role": "system", "content": "Tu es un expert en voyages."},
             {"role": "user", "content": prompt},
         ],
+        temperature=0.7,
         max_tokens=1600,
-        temperature=0.7
     )
     return completion.choices[0].message.content
 
-# =====================================================
-# PDF SAFE
-# =====================================================
-def generate_pdf(text, title):
-    pdf = FPDF()
-    pdf.set_auto_page_break(True, 15)
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, unidecode(title), ln=True)
-    pdf.ln(5)
 
-    pdf.set_font("Helvetica", "", 11)
-    for line in unidecode(text).split("\n"):
-        pdf.multi_cell(0, 6, line)
+# --------------------------------------------------
+# BOUTON GÉNÉRATION (IMPORTANT)
+# --------------------------------------------------
+st.markdown("---")
 
-    return pdf.output(dest="S").encode("latin-1")
+if st.button("✨ Générer mon séjour", type="primary"):
+    with st.spinner("ATLAS prépare votre séjour..."):
+        prompt = construire_prompt(pays, categorie, lieux)
+        resultat = generer_sejour(prompt)
+        st.session_state["resultat"] = resultat
 
-# =====================================================
-# ACTION
-# =====================================================
-if st.button("✨ Générer mon séjour"):
-    with st.spinner("ATLAS réfléchit…"):
-        result = generate_itinerary(build_prompt())
-        st.session_state["result"] = result
-
-if "result" in st.session_state:
-    st.markdown("## 🧳 Itinéraire")
-    st.markdown(st.session_state["result"])
-
-    pdf_bytes = generate_pdf(
-        st.session_state["result"],
-        f"ATLAS – Séjour {pays}"
-    )
-
-    st.download_button(
-        "📄 Télécharger le PDF",
-        data=pdf_bytes,
-        file_name=f"ATLAS_{pays}.pdf",
-        mime="application/pdf"
-    )
+# --------------------------------------------------
+# AFFICHAGE DU SÉJOUR
+# --------------------------------------------------
+if "resultat" in st.session_state:
+    st.markdown("## 🧳 Votre séjour personnalisé")
+    st.markdown(st.session_state["resultat"])
