@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from groq import Groq
 
+# Marqueur pour vérifier que c'est bien CE fichier qui tourne
+st.write("✅ ATLAS — VERSION SANS PDF NI CARTE")
+
 # -------------------------------------------------------------
 # CONFIG GLOBALE
 # -------------------------------------------------------------
@@ -11,13 +14,8 @@ st.set_page_config(page_title="ATLAS – Générateur de séjour parfait", layou
 st.markdown(
     """
     <style>
-    /* Body */
-    body {
-        background: #050816;
-        color: #f5f5f5;
-    }
+    body { background: #050816; color: #f5f5f5; }
 
-    /* Titre principal */
     .atlas-title {
         font-size: 3rem;
         font-weight: 800;
@@ -33,7 +31,6 @@ st.markdown(
         margin-bottom: 1.5rem;
     }
 
-    /* Boîtes */
     .atlas-box {
         background: #0b1020;
         border-radius: 16px;
@@ -41,7 +38,6 @@ st.markdown(
         border: 1px solid #1f2937;
     }
 
-    /* Boutons */
     div.stButton > button:first-child {
         font-weight: 600;
         border-radius: 999px;
@@ -55,7 +51,6 @@ st.markdown(
         background: linear-gradient(135deg, #4f46e5, #db2777);
     }
 
-    /* Badges */
     .atlas-badge {
         display: inline-block;
         padding: 0.25rem 0.7rem;
@@ -66,7 +61,6 @@ st.markdown(
         margin-bottom: 0.35rem;
     }
 
-    /* Cartes lieux */
     .atlas-card {
         background: #020617;
         border-radius: 14px;
@@ -92,9 +86,7 @@ st.markdown(
         text-decoration: none;
         font-weight: 500;
     }
-    .atlas-link:hover {
-        text-decoration: underline;
-    }
+    .atlas-link:hover { text-decoration: underline; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -124,10 +116,8 @@ def load_data() -> pd.DataFrame:
     )
     return df
 
-
 df = load_data()
 
-# colonnes possibles
 note_col_candidates = [c for c in df.columns if "note" in c]
 note_col = note_col_candidates[0] if note_col_candidates else None
 
@@ -142,6 +132,7 @@ for candidate in ["lien_images", "image_url", "photo", "image"]:
 # -------------------------------------------------------------
 with st.container():
     col1, col2 = st.columns(2)
+
     with col1:
         st.markdown('<div class="atlas-box">', unsafe_allow_html=True)
         pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].unique()))
@@ -153,7 +144,6 @@ with st.container():
         categorie = st.selectbox("🎯 Choisissez une catégorie d’activité :", categories)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Filtrage des lieux
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
 if lieux.empty:
@@ -165,7 +155,6 @@ else:
 # FONCTIONS UTILITAIRES
 # -------------------------------------------------------------
 def construire_prompt(pays: str, categorie: str, lieux_df: pd.DataFrame) -> str:
-    """Construit le prompt à envoyer au modèle Groq."""
     lignes = []
     for _, row in lieux_df.iterrows():
         nom = row.get("nom_lieu", "Lieu")
@@ -188,7 +177,7 @@ def construire_prompt(pays: str, categorie: str, lieux_df: pd.DataFrame) -> str:
 
     texte_lieux = "\n".join(lignes)
 
-    prompt = f"""
+    return f"""
 Tu es un expert en voyages et créateur d'itinéraires sur-mesure.
 
 Crée un **itinéraire inspirant et réaliste de 3 jours** à **{pays}**, centré sur la catégorie d’activités **{categorie}**.
@@ -198,22 +187,15 @@ Voici la liste des lieux à intégrer (au minimum quelques-uns dans l’itinéra
 {texte_lieux}
 
 ### FORMAT ATTENDU
+- **Jour 1**, **Jour 2**, **Jour 3** : programme détaillé, rythme, pauses, ambiance.
+- Indique explicitement quand un lieu listé est utilisé (par son nom).
+- Conseils pratiques : horaires, durée, ambiance, budget.
+- Conclusion courte qui donne envie de partir.
 
-- Présente ton résultat en sections claires :
-  - **Jour 1** : programme détaillé, rythme de la journée, visites, pauses, ambiance.
-  - **Jour 2** : idem.
-  - **Jour 3** : idem.
-- Indique explicitement quand l’un des lieux listés est utilisé (par son nom).
-- Donne quelques conseils pratiques : horaires recommandés, durée sur place, ambiance, budget.
-- Termine par une courte conclusion qui donne envie de partir.
-
-Le ton doit être chaleureux, précis, rassurant, mais pas trop long.
-"""
-    return prompt
-
+Ton chaleureux, précis, rassurant, pas trop long.
+""".strip()
 
 def appeler_ia(prompt: str) -> str:
-    """Appel à l'API Groq avec le modèle llama-3.1-8b-instant."""
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         completion = client.chat.completions.create(
@@ -230,7 +212,7 @@ def appeler_ia(prompt: str) -> str:
         return f"❌ Erreur lors de l’appel à l’IA : {e}"
 
 # -------------------------------------------------------------
-# AFFICHAGE DES LIEUX (PHOTOS, SANS CARTE)
+# AFFICHAGE DES LIEUX (SANS CARTE)
 # -------------------------------------------------------------
 st.markdown("### 📍 Vos lieux sélectionnés")
 
@@ -248,7 +230,6 @@ if not lieux.empty:
             ideal = row.get("ideal_pour", "")
             url_resa = row.get("url_reservation", "")
 
-            # Image
             if image_col and pd.notna(row.get(image_col, None)):
                 try:
                     st.image(row[image_col], use_column_width=True)
@@ -259,14 +240,10 @@ if not lieux.empty:
             if ville:
                 st.markdown(f'<div class="atlas-card-city">{ville}</div>', unsafe_allow_html=True)
 
-            # Badges
-            badges = []
             if note not in [None, ""]:
-                badges.append(f"⭐ {note}/5")
+                st.markdown(f'<span class="atlas-badge">⭐ {note}/5</span>', unsafe_allow_html=True)
             if ideal:
-                badges.append(f"🎯 {ideal}")
-            for b in badges:
-                st.markdown(f'<span class="atlas-badge">{b}</span>', unsafe_allow_html=True)
+                st.markdown(f'<span class="atlas-badge">🎯 {ideal}</span>', unsafe_allow_html=True)
 
             if url_resa:
                 st.markdown(
@@ -277,7 +254,7 @@ if not lieux.empty:
             st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# GÉNÉRATION DU SÉJOUR AVEC L’IA (SANS EXPORT PDF)
+# GÉNÉRATION DU SÉJOUR AVEC L’IA (SANS PDF)
 # -------------------------------------------------------------
 st.markdown("---")
 st.markdown("## 🧠 Générer un séjour parfait avec ATLAS")
@@ -291,8 +268,7 @@ if lancer and lieux.empty:
 elif lancer:
     with st.spinner("🤖 L’IA prépare votre séjour, un instant…"):
         prompt = construire_prompt(pays, categorie, lieux)
-        resultat = appeler_ia(prompt)
-        st.session_state["atlas_resultat"] = resultat
+        st.session_state["atlas_resultat"] = appeler_ia(prompt)
 
 if "atlas_resultat" in st.session_state:
     st.markdown("### 🧳 Votre séjour personnalisé")
