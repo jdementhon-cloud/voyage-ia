@@ -12,21 +12,16 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# CSS GLOBAL — TEXTE NOIR FORCÉ
+# CSS PROPRE : TEXTE NOIR, ONGLET STREAMLIT INTACTS
 # -------------------------------------------------------------
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 
-    /* RESET GLOBAL */
-    * {
-        font-family: 'Montserrat', sans-serif !important;
-        color: #000000 !important;
-    }
-
     body, .stApp {
-        background-color: #F7EDE2 !important;
+        background-color: #F7EDE2;
+        font-family: 'Montserrat', sans-serif;
     }
 
     /* CONTENEUR */
@@ -36,18 +31,25 @@ st.markdown(
         padding-bottom: 3rem;
     }
 
+    /* TEXTE GÉNÉRAL */
+    h1, h2, h3, h4, h5, h6,
+    p, span, div,
+    label {
+        color: #000000;
+    }
+
     /* TITRES */
     .atlas-title {
         font-size: 3.3rem;
         font-weight: 900;
         letter-spacing: -0.03em;
-        color: #BF5A4E !important;
+        color: #BF5A4E;
         margin-bottom: 0.2rem;
     }
 
     .atlas-subtitle {
         font-size: 1.05rem;
-        color: #374151 !important;
+        color: #374151;
         margin-bottom: 2rem;
         font-weight: 500;
     }
@@ -55,7 +57,7 @@ st.markdown(
     /* CARTES */
     .atlas-box,
     .atlas-card {
-        background: #ffffff !important;
+        background: #ffffff;
         border-radius: 18px;
         padding: 1.2rem;
         border: 1px solid #e5e7eb;
@@ -70,7 +72,7 @@ st.markdown(
 
     .atlas-card-city {
         font-size: 0.9rem;
-        color: #374151 !important;
+        color: #374151;
         margin-bottom: 0.4rem;
     }
 
@@ -83,11 +85,12 @@ st.markdown(
         border: 1px solid rgba(191,90,78,0.35);
         font-size: 0.75rem;
         font-weight: 600;
+        color: #000000;
     }
 
     /* LIENS */
     a.atlas-link {
-        color: #BF5A4E !important;
+        color: #BF5A4E;
         font-weight: 700;
         text-decoration: none;
     }
@@ -97,50 +100,23 @@ st.markdown(
     }
 
     /* BOUTONS */
-    button {
-        background-color: #BF5A4E !important;
-        color: #ffffff !important;
-        border-radius: 999px !important;
-        font-weight: 800 !important;
-        border: none !important;
-        padding: 0.65rem 1.6rem !important;
+    div.stButton > button {
+        background-color: #BF5A4E;
+        color: #ffffff;
+        border-radius: 999px;
+        font-weight: 800;
+        border: none;
+        padding: 0.65rem 1.6rem;
     }
 
-    /* SELECT / INPUT */
-    input, textarea {
-        color: #000000 !important;
-    }
-
-    div[data-baseweb="select"] * {
-        color: #000000 !important;
-    }
-
-    div[data-baseweb="select"] {
-        background: #ffffff !important;
-        border-radius: 14px !important;
-        border: 1px solid #e5e7eb !important;
-    }
-
-    label {
-        color: #000000 !important;
-        font-weight: 600;
-    }
-
-    /* ALERTES */
-    .stAlert * {
-        color: #000000 !important;
-    }
-
-    img {
-        border-radius: 14px;
-    }
+    /* ⚠️ IMPORTANT : on NE TOUCHE PAS aux selectbox / onglets */
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # -------------------------------------------------------------
-# HEADER AVEC LOGO
+# HEADER
 # -------------------------------------------------------------
 logo_path = Path(__file__).parent / "assets" / "logo_atlas.png"
 
@@ -240,9 +216,7 @@ for i, (_, row) in enumerate(lieux.iterrows()):
 # IA
 # -------------------------------------------------------------
 def construire_prompt(pays, categorie, lieux_df):
-    lignes = []
-    for _, row in lieux_df.iterrows():
-        lignes.append(f"- {row.get('nom_lieu')} ({row.get('ville')})")
+    lignes = [f"- {row.get('nom_lieu')} ({row.get('ville')})" for _, row in lieux_df.iterrows()]
     return f"""
 Crée un itinéraire de 3 jours à {pays} autour de {categorie}.
 Lieux :
