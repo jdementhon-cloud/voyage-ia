@@ -5,22 +5,19 @@ from groq import Groq
 # -------------------------------------------------------------
 # CONFIG GLOBALE
 # -------------------------------------------------------------
-st.set_page_config(page_title="ATLAS – Générateur de séjour parfait", layout="wide")
+st.set_page_config(
+    page_title="ATLAS – Générateur de séjour parfait",
+    layout="wide"
+)
 
 # -------------------------------------------------------------
-# STYLE (Montserrat + couleur principale #BF5A4E)
+# STYLE (Montserrat + #BF5A4E)
 # -------------------------------------------------------------
 st.markdown(
     """
     <style>
-    /* --------------------------------------------------
-       IMPORT FONT
-    -------------------------------------------------- */
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 
-    /* --------------------------------------------------
-       VARIABLES
-    -------------------------------------------------- */
     :root {
         --primary: #BF5A4E;
         --primary-soft: rgba(191, 90, 78, 0.12);
@@ -36,9 +33,6 @@ st.markdown(
         --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
     }
 
-    /* --------------------------------------------------
-       BASE
-    -------------------------------------------------- */
     html, body, [class*="css"] {
         font-family: 'Montserrat', sans-serif;
     }
@@ -54,14 +48,11 @@ st.markdown(
         padding-bottom: 3rem;
     }
 
-    /* --------------------------------------------------
-       TITRES
-    -------------------------------------------------- */
     .atlas-title {
         font-size: 3.2rem;
         font-weight: 900;
         letter-spacing: -0.03em;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.15rem;
         color: var(--primary);
     }
 
@@ -72,9 +63,6 @@ st.markdown(
         font-weight: 500;
     }
 
-    /* --------------------------------------------------
-       BOX / CARDS
-    -------------------------------------------------- */
     .atlas-box {
         background: var(--card);
         border-radius: var(--radius);
@@ -95,9 +83,8 @@ st.markdown(
     .atlas-card-title {
         font-size: 1.05rem;
         font-weight: 800;
-        margin-top: 0.7rem;
+        margin-top: 0.6rem;
         margin-bottom: 0.25rem;
-        color: var(--text);
     }
 
     .atlas-card-city {
@@ -107,25 +94,18 @@ st.markdown(
         font-weight: 500;
     }
 
-    /* --------------------------------------------------
-       BADGES
-    -------------------------------------------------- */
     .atlas-badge {
         display: inline-block;
         padding: 0.25rem 0.7rem;
         border-radius: 999px;
         background: var(--primary-soft);
         border: 1px solid var(--primary-border);
-        color: var(--text);
         font-size: 0.75rem;
         font-weight: 600;
         margin-right: 0.35rem;
         margin-bottom: 0.35rem;
     }
 
-    /* --------------------------------------------------
-       LIENS
-    -------------------------------------------------- */
     .atlas-link {
         color: var(--primary) !important;
         text-decoration: none;
@@ -136,9 +116,6 @@ st.markdown(
         text-decoration: underline;
     }
 
-    /* --------------------------------------------------
-       BOUTONS
-    -------------------------------------------------- */
     div.stButton > button:first-child {
         font-family: 'Montserrat', sans-serif;
         font-weight: 800;
@@ -156,23 +133,12 @@ st.markdown(
         transform: translateY(-1px);
     }
 
-    div.stButton > button:first-child:active {
-        transform: translateY(0);
-    }
-
-    /* --------------------------------------------------
-       INPUTS
-    -------------------------------------------------- */
     div[data-baseweb="select"] > div {
-        font-family: 'Montserrat', sans-serif;
         border-radius: 14px;
         border: 1px solid var(--border);
         background: white;
     }
 
-    /* --------------------------------------------------
-       IMAGES
-    -------------------------------------------------- */
     img {
         border-radius: 14px;
     }
@@ -182,19 +148,25 @@ st.markdown(
 )
 
 # -------------------------------------------------------------
-# ENTÊTE ATLAS
+# HEADER AVEC LOGO SVG (MÉTHODE FIABLE STREAMLIT CLOUD)
 # -------------------------------------------------------------
-st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="atlas-subtitle">Voyager mieux, sans réfléchir plus.</div>',
-    unsafe_allow_html=True,
-)
+col_logo, col_title = st.columns([1, 8], vertical_alignment="center")
+
+with col_logo:
+    st.image("assets/logo_atlas.svg", width=60)
+
+with col_title:
+    st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="atlas-subtitle">Voyager mieux, sans réfléchir plus.</div>',
+        unsafe_allow_html=True,
+    )
 
 # -------------------------------------------------------------
 # CHARGEMENT DES DONNÉES
 # -------------------------------------------------------------
 @st.cache_data
-def load_data() -> pd.DataFrame:
+def load_data():
     df = pd.read_excel("data.xlsx")
     df.columns = (
         df.columns.str.strip()
@@ -208,33 +180,29 @@ def load_data() -> pd.DataFrame:
 
 df = load_data()
 
-# colonnes possibles
-note_col_candidates = [c for c in df.columns if "note" in c]
-note_col = note_col_candidates[0] if note_col_candidates else None
+note_col = next((c for c in df.columns if "note" in c), None)
 
-image_col = None
-for candidate in ["lien_images", "image_url", "photo", "image"]:
-    if candidate in df.columns:
-        image_col = candidate
-        break
+image_col = next(
+    (c for c in ["lien_images", "image_url", "photo", "image"] if c in df.columns),
+    None,
+)
 
 # -------------------------------------------------------------
 # UI – CHOIX PAYS & CATÉGORIE
 # -------------------------------------------------------------
-with st.container():
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="atlas-box">', unsafe_allow_html=True)
-        pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].unique()))
-        st.markdown("</div>", unsafe_allow_html=True)
+col1, col2 = st.columns(2)
 
-    with col2:
-        st.markdown('<div class="atlas-box">', unsafe_allow_html=True)
-        categories = sorted(df[df["pays"] == pays]["categorie"].unique())
-        categorie = st.selectbox("🎯 Choisissez une catégorie d’activité :", categories)
-        st.markdown("</div>", unsafe_allow_html=True)
+with col1:
+    st.markdown('<div class="atlas-box">', unsafe_allow_html=True)
+    pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].unique()))
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# Filtrage des lieux
+with col2:
+    st.markdown('<div class="atlas-box">', unsafe_allow_html=True)
+    categories = sorted(df[df["pays"] == pays]["categorie"].unique())
+    categorie = st.selectbox("🎯 Choisissez une catégorie d’activité :", categories)
+    st.markdown("</div>", unsafe_allow_html=True)
+
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
 if lieux.empty:
@@ -243,144 +211,76 @@ else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -------------------------------------------------------------
-# FONCTIONS UTILITAIRES
+# PROMPT IA
 # -------------------------------------------------------------
-def construire_prompt(pays: str, categorie: str, lieux_df: pd.DataFrame) -> str:
-    """Construit le prompt à envoyer au modèle Groq."""
+def construire_prompt(pays, categorie, lieux_df):
     lignes = []
     for _, row in lieux_df.iterrows():
-        nom = row.get("nom_lieu", "Lieu")
-        ville = row.get("ville", "")
-        prix = row.get("prix", "")
-        note = row.get(note_col, "") if note_col else ""
-        ideal = row.get("ideal_pour", "")
-        url_resa = row.get("url_reservation", "")
-
-        ligne = f"- **{nom}** ({ville})"
-        if prix != "":
-            ligne += f" — {prix}€"
-        if note != "":
-            ligne += f" — ⭐ {note}/5"
-        if ideal:
-            ligne += f" — Idéal pour : {ideal}"
-        if url_resa:
-            ligne += f"\n  🔗 Réservation : {url_resa}"
+        ligne = f"- **{row.get('nom_lieu','Lieu')}** ({row.get('ville','')})"
+        if note_col and row.get(note_col):
+            ligne += f" — ⭐ {row[note_col]}/5"
         lignes.append(ligne)
 
-    texte_lieux = "\n".join(lignes)
+    return f"""
+Tu es un expert en voyages.
 
-    prompt = f"""
-Tu es un expert en voyages et créateur d'itinéraires sur-mesure.
+Crée un itinéraire **de 3 jours** à **{pays}** autour de **{categorie}**.
 
-Crée un **itinéraire inspirant et réaliste de 3 jours** à **{pays}**, centré sur la catégorie d’activités **{categorie}**.
+Lieux disponibles :
+{chr(10).join(lignes)}
 
-Voici la liste des lieux à intégrer (au minimum quelques-uns dans l’itinéraire) :
-
-{texte_lieux}
-
-### FORMAT ATTENDU
-
-- Présente ton résultat en sections claires :
-  - **Jour 1** : programme détaillé, rythme de la journée, visites, pauses, ambiance.
-  - **Jour 2** : idem.
-  - **Jour 3** : idem.
-- Indique explicitement quand l’un des lieux listés est utilisé (par son nom).
-- Donne quelques conseils pratiques : horaires recommandés, durée sur place, ambiance, budget.
-- Termine par une courte conclusion qui donne envie de partir.
-
-Le ton doit être chaleureux, précis, rassurant, mais pas trop long.
+Structure par jour, conseils pratiques, ton chaleureux.
 """
-    return prompt.strip()
 
 
-def appeler_ia(prompt: str) -> str:
-    """Appel à l'API Groq avec le modèle llama-3.1-8b-instant."""
-    try:
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "Tu es un expert des voyages haut de gamme."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.7,
-            max_tokens=1800,
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        return f"❌ Erreur lors de l’appel à l’IA : {e}"
+def appeler_ia(prompt):
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    completion = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": "Tu es un expert des voyages haut de gamme."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.7,
+        max_tokens=1800,
+    )
+    return completion.choices[0].message.content
 
 # -------------------------------------------------------------
-# AFFICHAGE DES LIEUX (PHOTOS, SANS CARTE)
+# AFFICHAGE DES LIEUX
 # -------------------------------------------------------------
 st.markdown("### 📍 Vos lieux sélectionnés")
 
-if not lieux.empty:
-    st.markdown("### ✨ Suggestions de spots")
+cols = st.columns(3)
+for i, (_, row) in enumerate(lieux.iterrows()):
+    with cols[i % 3]:
+        st.markdown('<div class="atlas-card">', unsafe_allow_html=True)
 
-    cols = st.columns(3)
-    for i, (_, row) in enumerate(lieux.iterrows()):
-        with cols[i % 3]:
-            st.markdown('<div class="atlas-card">', unsafe_allow_html=True)
+        if image_col and pd.notna(row.get(image_col)):
+            st.image(row[image_col], use_column_width=True)
 
-            nom = row.get("nom_lieu", "Lieu")
-            ville = row.get("ville", "")
-            note = row.get(note_col, None) if note_col else None
-            ideal = row.get("ideal_pour", "")
-            url_resa = row.get("url_reservation", "")
+        st.markdown(
+            f'<div class="atlas-card-title">{row.get("nom_lieu","Lieu")}</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="atlas-card-city">{row.get("ville","")}</div>',
+            unsafe_allow_html=True,
+        )
 
-            # Image
-            if image_col and pd.notna(row.get(image_col, None)):
-                try:
-                    st.image(row[image_col], use_column_width=True)
-                except Exception:
-                    pass
-
-            st.markdown(f'<div class="atlas-card-title">{nom}</div>', unsafe_allow_html=True)
-            if ville:
-                st.markdown(
-                    f'<div class="atlas-card-city">{ville}</div>', unsafe_allow_html=True
-                )
-
-            # Badges
-            if note not in [None, ""]:
-                st.markdown(
-                    f'<span class="atlas-badge">⭐ {note}/5</span>',
-                    unsafe_allow_html=True,
-                )
-            if ideal:
-                st.markdown(
-                    f'<span class="atlas-badge">🎯 {ideal}</span>',
-                    unsafe_allow_html=True,
-                )
-
-            if url_resa:
-                st.markdown(
-                    f'<p><a class="atlas-link" href="{url_resa}" target="_blank">🔗 Voir la page / réserver</a></p>',
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# GÉNÉRATION DU SÉJOUR AVEC L’IA (SANS PDF)
+# GÉNÉRATION IA
 # -------------------------------------------------------------
 st.markdown("---")
-st.markdown("## 🧠 Générer un séjour parfait avec ATLAS")
+st.markdown("## 🧠 Générer un séjour parfait")
 
-col_button, _ = st.columns([1, 3])
-with col_button:
-    lancer = st.button("✨ Générer mon séjour parfait")
+if st.button("✨ Générer mon séjour parfait"):
+    with st.spinner("🤖 Génération en cours…"):
+        resultat = appeler_ia(construire_prompt(pays, categorie, lieux))
+        st.session_state["resultat"] = resultat
 
-if lancer and lieux.empty:
-    st.error("Impossible de générer un séjour : aucun lieu pour cette sélection.")
-elif lancer:
-    with st.spinner("🤖 L’IA prépare votre séjour, un instant…"):
-        prompt = construire_prompt(pays, categorie, lieux)
-        resultat = appeler_ia(prompt)
-        st.session_state["atlas_resultat"] = resultat
-
-# Affichage du résultat
-if "atlas_resultat" in st.session_state:
+if "resultat" in st.session_state:
     st.markdown("### 🧳 Votre séjour personnalisé")
-    st.markdown(st.session_state["atlas_resultat"])
+    st.markdown(st.session_state["resultat"])
