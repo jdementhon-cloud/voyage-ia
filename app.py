@@ -7,83 +7,175 @@ from groq import Groq
 # -------------------------------------------------------------
 st.set_page_config(page_title="ATLAS – Générateur de séjour parfait", layout="wide")
 
-# Petit thème custom
+# -------------------------------------------------------------
+# STYLE (Montserrat + couleur principale #BF5A4E)
+# -------------------------------------------------------------
 st.markdown(
     """
     <style>
-    body { background: #050816; color: #f5f5f5; }
+    /* --------------------------------------------------
+       IMPORT FONT
+    -------------------------------------------------- */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 
+    /* --------------------------------------------------
+       VARIABLES
+    -------------------------------------------------- */
+    :root {
+        --primary: #BF5A4E;
+        --primary-soft: rgba(191, 90, 78, 0.12);
+        --primary-border: rgba(191, 90, 78, 0.25);
+
+        --bg: #fafafa;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+
+        --radius: 18px;
+        --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    /* --------------------------------------------------
+       BASE
+    -------------------------------------------------- */
+    html, body, [class*="css"] {
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    .stApp {
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    .block-container {
+        max-width: 1200px;
+        padding-top: 2.2rem;
+        padding-bottom: 3rem;
+    }
+
+    /* --------------------------------------------------
+       TITRES
+    -------------------------------------------------- */
     .atlas-title {
-        font-size: 3rem;
-        font-weight: 800;
+        font-size: 3.2rem;
+        font-weight: 900;
+        letter-spacing: -0.03em;
         margin-bottom: 0.2rem;
-        background: linear-gradient(90deg, #ffb703, #fb7185, #38bdf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: var(--primary);
     }
 
     .atlas-subtitle {
-        font-size: 1.1rem;
-        color: #e5e7eb;
-        margin-bottom: 1.5rem;
+        font-size: 1.05rem;
+        color: var(--muted);
+        margin-bottom: 1.8rem;
+        font-weight: 500;
     }
 
+    /* --------------------------------------------------
+       BOX / CARDS
+    -------------------------------------------------- */
     .atlas-box {
-        background: #0b1020;
-        border-radius: 16px;
-        padding: 1.1rem 1.4rem;
-        border: 1px solid #1f2937;
-    }
-
-    div.stButton > button:first-child {
-        font-weight: 600;
-        border-radius: 999px;
-        padding: 0.6rem 1.6rem;
-        border: none;
-        background: linear-gradient(135deg, #6366f1, #ec4899);
-        color: white;
-    }
-
-    div.stButton > button:first-child:hover {
-        background: linear-gradient(135deg, #4f46e5, #db2777);
-    }
-
-    .atlas-badge {
-        display: inline-block;
-        padding: 0.25rem 0.7rem;
-        border-radius: 999px;
-        background: rgba(148, 163, 184, 0.2);
-        font-size: 0.8rem;
-        margin-right: 0.35rem;
-        margin-bottom: 0.35rem;
+        background: var(--card);
+        border-radius: var(--radius);
+        padding: 1.15rem 1.3rem;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
     }
 
     .atlas-card {
-        background: #020617;
-        border-radius: 14px;
-        padding: 0.9rem 1rem;
-        border: 1px solid #1e293b;
+        background: var(--card);
+        border-radius: var(--radius);
+        padding: 1rem 1.05rem;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
         height: 100%;
     }
 
     .atlas-card-title {
-        font-weight: 700;
         font-size: 1.05rem;
-        margin-bottom: 0.35rem;
+        font-weight: 800;
+        margin-top: 0.7rem;
+        margin-bottom: 0.25rem;
+        color: var(--text);
     }
 
     .atlas-card-city {
         font-size: 0.9rem;
-        color: #9ca3af;
+        color: var(--muted);
         margin-bottom: 0.4rem;
-    }
-
-    .atlas-link {
-        color: #38bdf8 !important;
-        text-decoration: none;
         font-weight: 500;
     }
-    .atlas-link:hover { text-decoration: underline; }
+
+    /* --------------------------------------------------
+       BADGES
+    -------------------------------------------------- */
+    .atlas-badge {
+        display: inline-block;
+        padding: 0.25rem 0.7rem;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        border: 1px solid var(--primary-border);
+        color: var(--text);
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-right: 0.35rem;
+        margin-bottom: 0.35rem;
+    }
+
+    /* --------------------------------------------------
+       LIENS
+    -------------------------------------------------- */
+    .atlas-link {
+        color: var(--primary) !important;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .atlas-link:hover {
+        text-decoration: underline;
+    }
+
+    /* --------------------------------------------------
+       BOUTONS
+    -------------------------------------------------- */
+    div.stButton > button:first-child {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 800;
+        border-radius: 999px;
+        padding: 0.65rem 1.6rem;
+        border: 1px solid var(--primary-border);
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 10px 20px rgba(191, 90, 78, 0.35);
+        transition: all 0.15s ease;
+    }
+
+    div.stButton > button:first-child:hover {
+        filter: brightness(1.05);
+        transform: translateY(-1px);
+    }
+
+    div.stButton > button:first-child:active {
+        transform: translateY(0);
+    }
+
+    /* --------------------------------------------------
+       INPUTS
+    -------------------------------------------------- */
+    div[data-baseweb="select"] > div {
+        font-family: 'Montserrat', sans-serif;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: white;
+    }
+
+    /* --------------------------------------------------
+       IMAGES
+    -------------------------------------------------- */
+    img {
+        border-radius: 14px;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -94,7 +186,7 @@ st.markdown(
 # -------------------------------------------------------------
 st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="atlas-subtitle">Crée un itinéraire inspirant et personnalisé en quelques secondes.</div>',
+    '<div class="atlas-subtitle">Voyager mieux, sans réfléchir plus.</div>',
     unsafe_allow_html=True,
 )
 
@@ -113,8 +205,10 @@ def load_data() -> pd.DataFrame:
     )
     return df
 
+
 df = load_data()
 
+# colonnes possibles
 note_col_candidates = [c for c in df.columns if "note" in c]
 note_col = note_col_candidates[0] if note_col_candidates else None
 
@@ -129,7 +223,6 @@ for candidate in ["lien_images", "image_url", "photo", "image"]:
 # -------------------------------------------------------------
 with st.container():
     col1, col2 = st.columns(2)
-
     with col1:
         st.markdown('<div class="atlas-box">', unsafe_allow_html=True)
         pays = st.selectbox("🌍 Choisissez un pays :", sorted(df["pays"].unique()))
@@ -141,6 +234,7 @@ with st.container():
         categorie = st.selectbox("🎯 Choisissez une catégorie d’activité :", categories)
         st.markdown("</div>", unsafe_allow_html=True)
 
+# Filtrage des lieux
 lieux = df[(df["pays"] == pays) & (df["categorie"] == categorie)]
 
 if lieux.empty:
@@ -152,6 +246,7 @@ else:
 # FONCTIONS UTILITAIRES
 # -------------------------------------------------------------
 def construire_prompt(pays: str, categorie: str, lieux_df: pd.DataFrame) -> str:
+    """Construit le prompt à envoyer au modèle Groq."""
     lignes = []
     for _, row in lieux_df.iterrows():
         nom = row.get("nom_lieu", "Lieu")
@@ -174,7 +269,7 @@ def construire_prompt(pays: str, categorie: str, lieux_df: pd.DataFrame) -> str:
 
     texte_lieux = "\n".join(lignes)
 
-    return f"""
+    prompt = f"""
 Tu es un expert en voyages et créateur d'itinéraires sur-mesure.
 
 Crée un **itinéraire inspirant et réaliste de 3 jours** à **{pays}**, centré sur la catégorie d’activités **{categorie}**.
@@ -184,15 +279,22 @@ Voici la liste des lieux à intégrer (au minimum quelques-uns dans l’itinéra
 {texte_lieux}
 
 ### FORMAT ATTENDU
-- **Jour 1**, **Jour 2**, **Jour 3** : programme détaillé, rythme, pauses, ambiance.
-- Indique explicitement quand un lieu listé est utilisé (par son nom).
-- Conseils pratiques : horaires, durée, ambiance, budget.
-- Conclusion courte qui donne envie de partir.
 
-Ton chaleureux, précis, rassurant, pas trop long.
-""".strip()
+- Présente ton résultat en sections claires :
+  - **Jour 1** : programme détaillé, rythme de la journée, visites, pauses, ambiance.
+  - **Jour 2** : idem.
+  - **Jour 3** : idem.
+- Indique explicitement quand l’un des lieux listés est utilisé (par son nom).
+- Donne quelques conseils pratiques : horaires recommandés, durée sur place, ambiance, budget.
+- Termine par une courte conclusion qui donne envie de partir.
+
+Le ton doit être chaleureux, précis, rassurant, mais pas trop long.
+"""
+    return prompt.strip()
+
 
 def appeler_ia(prompt: str) -> str:
+    """Appel à l'API Groq avec le modèle llama-3.1-8b-instant."""
     try:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         completion = client.chat.completions.create(
@@ -209,7 +311,7 @@ def appeler_ia(prompt: str) -> str:
         return f"❌ Erreur lors de l’appel à l’IA : {e}"
 
 # -------------------------------------------------------------
-# AFFICHAGE DES LIEUX (SANS CARTE)
+# AFFICHAGE DES LIEUX (PHOTOS, SANS CARTE)
 # -------------------------------------------------------------
 st.markdown("### 📍 Vos lieux sélectionnés")
 
@@ -227,6 +329,7 @@ if not lieux.empty:
             ideal = row.get("ideal_pour", "")
             url_resa = row.get("url_reservation", "")
 
+            # Image
             if image_col and pd.notna(row.get(image_col, None)):
                 try:
                     st.image(row[image_col], use_column_width=True)
@@ -235,12 +338,21 @@ if not lieux.empty:
 
             st.markdown(f'<div class="atlas-card-title">{nom}</div>', unsafe_allow_html=True)
             if ville:
-                st.markdown(f'<div class="atlas-card-city">{ville}</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="atlas-card-city">{ville}</div>', unsafe_allow_html=True
+                )
 
+            # Badges
             if note not in [None, ""]:
-                st.markdown(f'<span class="atlas-badge">⭐ {note}/5</span>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<span class="atlas-badge">⭐ {note}/5</span>',
+                    unsafe_allow_html=True,
+                )
             if ideal:
-                st.markdown(f'<span class="atlas-badge">🎯 {ideal}</span>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<span class="atlas-badge">🎯 {ideal}</span>',
+                    unsafe_allow_html=True,
+                )
 
             if url_resa:
                 st.markdown(
@@ -265,8 +377,10 @@ if lancer and lieux.empty:
 elif lancer:
     with st.spinner("🤖 L’IA prépare votre séjour, un instant…"):
         prompt = construire_prompt(pays, categorie, lieux)
-        st.session_state["atlas_resultat"] = appeler_ia(prompt)
+        resultat = appeler_ia(prompt)
+        st.session_state["atlas_resultat"] = resultat
 
+# Affichage du résultat
 if "atlas_resultat" in st.session_state:
     st.markdown("### 🧳 Votre séjour personnalisé")
     st.markdown(st.session_state["atlas_resultat"])
