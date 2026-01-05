@@ -6,157 +6,199 @@ from pathlib import Path
 # -------------------------------------------------------------
 # CONFIG
 # -------------------------------------------------------------
-st.set_page_config(
-    page_title="ATLAS – Générateur de séjour parfait",
-    layout="wide"
-)
+st.set_page_config(page_title="ATLAS – Générateur de séjour parfait", layout="wide")
 
 # -------------------------------------------------------------
-# CSS — TEXTE NOIR + SELECTBOX CLAIRES
+# CSS (Montserrat + #BF5A4E + fond #F7EDE2 + texte noir + selectbox blanches)
 # -------------------------------------------------------------
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
 
-    body, .stApp {
-        background-color: #F7EDE2;
-        font-family: 'Montserrat', sans-serif;
+    :root{
+      --primary:#BF5A4E;
+      --bg:#F7EDE2;
+      --card:#ffffff;
+      --text:#000000;
+      --muted:#374151;
+      --border:#e5e7eb;
+      --radius:18px;
+      --shadow:0 12px 30px rgba(0,0,0,0.08);
     }
 
-    /* CONTENEUR */
-    .block-container {
-        max-width: 1200px;
-        padding-top: 2.5rem;
-        padding-bottom: 3rem;
+    /* App background + font */
+    html, body, .stApp {
+      background: var(--bg) !important;
+      font-family: 'Montserrat', sans-serif !important;
     }
 
-    /* TEXTE GLOBAL (hors inputs) */
-    h1, h2, h3, h4, h5, h6,
-    p {
-        color: #000000;
-    }
-
-    label {
-        color: #000000;
-        font-weight: 600;
-    }
-
-    /* TITRES */
-    .atlas-title {
-        font-size: 3.3rem;
-        font-weight: 900;
-        letter-spacing: -0.03em;
-        color: #BF5A4E;
-        margin-bottom: 0.2rem;
-    }
-
-    .atlas-subtitle {
-        font-size: 1.05rem;
-        color: #374151;
-        margin-bottom: 2rem;
-        font-weight: 500;
-    }
-
-    /* CARTES */
-    .atlas-box,
-    .atlas-card {
-        background: #ffffff;
-        border-radius: 18px;
-        padding: 1.2rem;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-    }
-
-    .atlas-card-title {
-        font-size: 1.05rem;
-        font-weight: 800;
-        margin-top: 0.6rem;
-        color: #000000;
-    }
-
-    .atlas-card-city {
-        font-size: 0.9rem;
-        color: #374151;
-        margin-bottom: 0.4rem;
-    }
-
-    /* BADGES */
-    .atlas-badge {
-        display: inline-block;
-        padding: 0.25rem 0.7rem;
-        border-radius: 999px;
-        background: rgba(191,90,78,0.15);
-        border: 1px solid rgba(191,90,78,0.35);
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #000000;
-    }
-
-    /* LIENS */
-    a.atlas-link {
-        color: #BF5A4E;
-        font-weight: 700;
-        text-decoration: none;
-    }
-
-    a.atlas-link:hover {
-        text-decoration: underline;
-    }
-
-    /* BOUTONS */
-    div.stButton > button {
-        background-color: #BF5A4E;
-        color: #ffffff;
-        border-radius: 999px;
-        font-weight: 800;
-        border: none;
-        padding: 0.65rem 1.6rem;
+    .block-container{
+      max-width:1200px;
+      padding-top:2.5rem;
+      padding-bottom:3rem;
     }
 
     /* --------------------------------------------------
-       SELECTBOX — FOND BLANC + TEXTE NOIR
+       FORCE TEXTE NOIR (markdown, titres, contenu généré, etc.)
+       (sans casser les composants)
     -------------------------------------------------- */
-    div[data-baseweb="select"] {
-        background: #ffffff !important;
-        border-radius: 14px !important;
-        border: 1px solid #e5e7eb !important;
+    .stMarkdown, .stMarkdown * ,
+    .stText, .stText * ,
+    .stCaption, .stCaption * ,
+    .stSubheader, .stSubheader * ,
+    .stHeader, .stHeader * ,
+    .stTitle, .stTitle * {
+      color: var(--text) !important;
     }
 
-    div[data-baseweb="select"] * {
-        color: #000000 !important;
+    /* Les éléments de texte courants */
+    p, li, ol, ul, strong, em, span, div {
+      color: var(--text);
     }
 
-    /* Placeholder (gris lisible) */
-    div[data-baseweb="select"] span[aria-hidden="true"] {
-        color: #6b7280 !important;
+    /* Labels */
+    label, .stSelectbox label, .stRadio label, .stTextInput label {
+      color: var(--text) !important;
+      font-weight: 600 !important;
     }
 
-    img {
-        border-radius: 14px;
+    /* --------------------------------------------------
+       Header custom
+    -------------------------------------------------- */
+    .atlas-title{
+      font-size:3.3rem;
+      font-weight:900;
+      letter-spacing:-0.03em;
+      color: var(--primary) !important;
+      margin-bottom:0.2rem;
     }
+    .atlas-subtitle{
+      font-size:1.05rem;
+      color: var(--muted) !important;
+      margin-bottom:2rem;
+      font-weight:500;
+    }
+
+    /* Cards / boxes */
+    .atlas-box, .atlas-card{
+      background: var(--card) !important;
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .atlas-card-title{
+      font-size:1.05rem;
+      font-weight:800;
+      margin-top:0.6rem;
+      margin-bottom:0.25rem;
+      color: var(--text) !important;
+    }
+    .atlas-card-city{
+      font-size:0.9rem;
+      color: var(--muted) !important;
+      margin-bottom:0.4rem;
+      font-weight:500;
+    }
+
+    .atlas-badge{
+      display:inline-block;
+      padding:0.25rem 0.7rem;
+      border-radius:999px;
+      background: rgba(191,90,78,0.15);
+      border: 1px solid rgba(191,90,78,0.35);
+      font-size:0.75rem;
+      font-weight:600;
+      color: var(--text) !important;
+      margin-right:0.35rem;
+      margin-bottom:0.35rem;
+    }
+
+    a.atlas-link{
+      color: var(--primary) !important;
+      font-weight:700;
+      text-decoration:none;
+    }
+    a.atlas-link:hover{ text-decoration:underline; }
+
+    /* Buttons */
+    div.stButton > button{
+      background: var(--primary) !important;
+      color: #ffffff !important;
+      border-radius:999px !important;
+      font-weight:800 !important;
+      border:none !important;
+      padding:0.65rem 1.6rem !important;
+    }
+
+    /* --------------------------------------------------
+       SELECTBOXES : fond blanc + texte noir (control + menu)
+    -------------------------------------------------- */
+
+    /* Le "control" (le rectangle visible) */
+    div[data-baseweb="select"] > div{
+      background-color: #ffffff !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 14px !important;
+      box-shadow: none !important;
+    }
+
+    /* Le texte à l’intérieur */
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] input{
+      color: #000000 !important;
+      -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* Icône flèche */
+    div[data-baseweb="select"] svg{
+      fill: #000000 !important;
+    }
+
+    /* Menu déroulant */
+    ul[role="listbox"]{
+      background: #ffffff !important;
+      color: #000000 !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 14px !important;
+    }
+    ul[role="listbox"] li{
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+    ul[role="listbox"] li:hover{
+      background: rgba(191,90,78,0.10) !important;
+      color: #000000 !important;
+    }
+
+    /* Images arrondies */
+    img{ border-radius:14px; }
+
+    /* Alert text readability */
+    .stAlert, .stAlert * { color: #000000 !important; }
+
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # -------------------------------------------------------------
-# HEADER
+# HEADER (logo PNG)
 # -------------------------------------------------------------
 logo_path = Path(__file__).parent / "assets" / "logo_atlas.png"
 
 col_logo, col_title = st.columns([2, 7], vertical_alignment="center")
-
 with col_logo:
     if logo_path.exists():
         st.image(str(logo_path), width=130)
+    else:
+        st.warning("Logo introuvable : assets/logo_atlas.png")
 
 with col_title:
     st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="atlas-subtitle">Voyager mieux, sans réfléchir plus.</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="atlas-subtitle">Voyager mieux, sans réfléchir plus.</div>', unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # DATA
@@ -202,7 +244,7 @@ else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -------------------------------------------------------------
-# LIEUX
+# LIEUX (cards + booking links)
 # -------------------------------------------------------------
 st.markdown("## 📍 Vos lieux sélectionnés")
 
@@ -214,20 +256,11 @@ for i, (_, row) in enumerate(lieux.iterrows()):
         if image_col and pd.notna(row.get(image_col)):
             st.image(row[image_col], use_column_width=True)
 
-        st.markdown(
-            f'<div class="atlas-card-title">{row.get("nom_lieu","Lieu")}</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f'<div class="atlas-card-city">{row.get("ville","")}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="atlas-card-title">{row.get("nom_lieu","Lieu")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="atlas-card-city">{row.get("ville","")}</div>', unsafe_allow_html=True)
 
         if note_col and row.get(note_col):
-            st.markdown(
-                f'<span class="atlas-badge">⭐ {row[note_col]}/5</span>',
-                unsafe_allow_html=True,
-            )
+            st.markdown(f'<span class="atlas-badge">⭐ {row[note_col]}/5</span>', unsafe_allow_html=True)
 
         if row.get("url_reservation"):
             st.markdown(
@@ -241,29 +274,54 @@ for i, (_, row) in enumerate(lieux.iterrows()):
 # IA
 # -------------------------------------------------------------
 def construire_prompt(pays, categorie, lieux_df):
-    lignes = [f"- {row.get('nom_lieu')} ({row.get('ville')})" for _, row in lieux_df.iterrows()]
+    lignes = []
+    for _, row in lieux_df.iterrows():
+        nom = row.get("nom_lieu", "Lieu")
+        ville = row.get("ville", "")
+        note = row.get(note_col, "") if note_col else ""
+        url = row.get("url_reservation", "")
+
+        line = f"- {nom} ({ville})"
+        if note != "":
+            line += f" — ⭐ {note}/5"
+        if url:
+            line += f"\n  🔗 Réservation : {url}"
+        lignes.append(line)
+
     return f"""
-Crée un itinéraire de 3 jours à {pays} autour de {categorie}.
-Lieux :
+Tu es un expert en voyages.
+
+Crée un itinéraire inspirant et réaliste de 3 jours à {pays}, centré sur {categorie}.
+
+Lieux disponibles :
 {chr(10).join(lignes)}
+
+Format : Jour 1 / Jour 2 / Jour 3 + conseils pratiques + conclusion.
+Ton chaleureux, précis, rassurant.
 """
 
-def appeler_ia(prompt):
+def appeler_ia(prompt: str) -> str:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    res = client.chat.completions.create(
+    completion = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": "Tu es un expert des voyages haut de gamme."},
+            {"role": "user", "content": prompt},
+        ],
         temperature=0.7,
         max_tokens=1800,
     )
-    return res.choices[0].message.content
+    return completion.choices[0].message.content
 
 st.markdown("---")
+st.markdown("## 🧠 Générer un séjour parfait")
+
 if st.button("✨ Générer mon séjour parfait"):
-    with st.spinner("🤖 Génération en cours…"):
-        st.session_state["resultat"] = appeler_ia(
-            construire_prompt(pays, categorie, lieux)
-        )
+    if lieux.empty:
+        st.error("Impossible de générer un séjour : aucun lieu pour cette sélection.")
+    else:
+        with st.spinner("🤖 Génération en cours…"):
+            st.session_state["resultat"] = appeler_ia(construire_prompt(pays, categorie, lieux))
 
 if "resultat" in st.session_state:
     st.markdown("## 🧳 Votre séjour personnalisé")
