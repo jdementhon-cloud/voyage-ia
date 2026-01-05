@@ -1,4 +1,5 @@
 import streamlit as st
+st.error("✅ NOUVELLE VERSION EN LIGNE — SANS PDF / SANS CARTE")
 import pandas as pd
 from groq import Groq
 
