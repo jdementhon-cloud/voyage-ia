@@ -9,7 +9,7 @@ from pathlib import Path
 st.set_page_config(page_title="ATLAS – Générateur de séjour parfait", layout="wide")
 
 # -------------------------------------------------------------
-# CSS (Montserrat + #BF5A4E + fond #F7EDE2 + texte noir + selects & dropdowns blancs)
+# CSS
 # -------------------------------------------------------------
 st.markdown(
     """
@@ -20,14 +20,15 @@ st.markdown(
       --primary:#BF5A4E;
       --bg:#F7EDE2;
       --card:#ffffff;
-      --text:#000000;
-      --muted:#374151;
+      --text:#111827;   /* noir doux */
+      --muted:#6b7280;
       --border:#e5e7eb;
       --radius:18px;
       --shadow:0 12px 30px rgba(0,0,0,0.08);
+      --hover: rgba(191,90,78,0.10);
     }
 
-    html, body, .stApp {
+    html, body, .stApp{
       background: var(--bg) !important;
       font-family: 'Montserrat', sans-serif !important;
     }
@@ -39,24 +40,24 @@ st.markdown(
     }
 
     /* --------------------------------------------------
-       FORCE TEXTE NOIR (inclut le markdown du séjour généré)
+       TEXTE (y compris résultat IA)
     -------------------------------------------------- */
-    .stMarkdown, .stMarkdown * ,
-    .stText, .stText * ,
-    .stCaption, .stCaption * ,
-    .stSubheader, .stSubheader * ,
-    .stHeader, .stHeader * ,
+    .stMarkdown, .stMarkdown *,
+    .stText, .stText *,
+    .stCaption, .stCaption *,
+    .stSubheader, .stSubheader *,
+    .stHeader, .stHeader *,
     .stTitle, .stTitle * {
       color: var(--text) !important;
     }
 
-    label, .stSelectbox label {
+    label, .stSelectbox label{
       color: var(--text) !important;
       font-weight: 600 !important;
     }
 
     /* --------------------------------------------------
-       Header custom
+       HEADER
     -------------------------------------------------- */
     .atlas-title{
       font-size:3.3rem;
@@ -67,7 +68,7 @@ st.markdown(
     }
     .atlas-subtitle{
       font-size:1.05rem;
-      color: var(--muted) !important;
+      color: #374151 !important;
       margin-bottom:2rem;
       font-weight:500;
     }
@@ -90,7 +91,7 @@ st.markdown(
     }
     .atlas-card-city{
       font-size:0.9rem;
-      color: var(--muted) !important;
+      color: #374151 !important;
       margin-bottom:0.4rem;
       font-weight:500;
     }
@@ -126,83 +127,81 @@ st.markdown(
     }
 
     /* --------------------------------------------------
-       SELECTBOX : control blanc + texte noir
+       ✅ SELECTBOX : NOIR SUR BLANC (CONTROL + DROPDOWN)
+       On cible BaseWeb très explicitement + portal/popover/menu
     -------------------------------------------------- */
 
-    /* Le "control" (rectangle visible) */
+    /* CONTROL (le champ visible) */
     div[data-baseweb="select"] > div{
-      background-color: #ffffff !important;
+      background: #ffffff !important;
       border: 1px solid var(--border) !important;
       border-radius: 14px !important;
       box-shadow: none !important;
     }
 
-    /* Texte/placeholder */
+    /* Valeur sélectionnée / input */
     div[data-baseweb="select"] span,
     div[data-baseweb="select"] input{
-      color: #000000 !important;
-      -webkit-text-fill-color: #000000 !important;
+      color: var(--text) !important;
+      -webkit-text-fill-color: var(--text) !important;
+      background: transparent !important;
     }
 
-    /* Flèche */
+    /* Placeholder (évite blanc sur blanc) */
+    div[data-baseweb="select"] [data-baseweb="select"] span[aria-hidden="true"],
+    div[data-baseweb="select"] span[aria-hidden="true"]{
+      color: var(--muted) !important;
+      -webkit-text-fill-color: var(--muted) !important;
+    }
+
+    /* Chevron (flèche) */
     div[data-baseweb="select"] svg{
-      fill: #000000 !important;
+      fill: var(--text) !important;
     }
 
-    /* --------------------------------------------------
-       DROPDOWN (menu déroulant) : BLANC + TEXTE NOIR
-       BaseWeb rend souvent ça dans un portal/popover
-    -------------------------------------------------- */
-
-    /* Conteneur popover du menu */
+    /* DROPDOWN — BaseWeb popover/menu (portal) */
     div[data-baseweb="popover"],
     div[data-baseweb="popover"] > div{
       background: #ffffff !important;
-      color: #000000 !important;
+      color: var(--text) !important;
       border-radius: 14px !important;
     }
 
-    /* Menu interne */
     div[data-baseweb="menu"]{
       background: #ffffff !important;
-      color: #000000 !important;
+      color: var(--text) !important;
       border: 1px solid var(--border) !important;
       border-radius: 14px !important;
       box-shadow: 0 18px 40px rgba(0,0,0,0.18) !important;
+      overflow: hidden !important;
     }
 
-    /* Items */
+    /* Items du menu */
     div[data-baseweb="menu"] *{
-      color: #000000 !important;
       background: #ffffff !important;
+      color: var(--text) !important;
     }
 
-    /* Hover item */
+    /* Hover / option active */
     div[data-baseweb="menu"] [role="option"]:hover{
-      background: rgba(191,90,78,0.10) !important;
+      background: var(--hover) !important;
+      color: var(--text) !important;
     }
 
-    /* Fallback listbox (selon versions Streamlit) */
-    ul[role="listbox"]{
+    /* Fallback selon versions : listbox */
+    [role="listbox"], [role="listbox"] *{
       background: #ffffff !important;
-      color: #000000 !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 14px !important;
+      color: var(--text) !important;
     }
-    ul[role="listbox"] li{
-      background: #ffffff !important;
-      color: #000000 !important;
-    }
-    ul[role="listbox"] li:hover{
-      background: rgba(191,90,78,0.10) !important;
-      color: #000000 !important;
+    [role="listbox"] [role="option"]:hover{
+      background: var(--hover) !important;
     }
 
-    /* Images arrondies */
+    /* Images */
     img{ border-radius:14px; }
 
-    /* Alert text readability */
-    .stAlert, .stAlert * { color: #000000 !important; }
+    /* Alerts */
+    .stAlert, .stAlert * { color: var(--text) !important; }
 
     </style>
     """,
