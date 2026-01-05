@@ -1,10 +1,6 @@
 import streamlit as st
-st.error("✅ NOUVELLE VERSION EN LIGNE — SANS PDF / SANS CARTE")
 import pandas as pd
 from groq import Groq
-
-# Marqueur pour vérifier que c'est bien CE fichier qui tourne
-st.write("✅ ATLAS — VERSION SANS PDF NI CARTE")
 
 # -------------------------------------------------------------
 # CONFIG GLOBALE
