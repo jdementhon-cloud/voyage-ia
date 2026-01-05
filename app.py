@@ -9,7 +9,7 @@ from pathlib import Path
 st.set_page_config(page_title="ATLAS – Générateur de séjour parfait", layout="wide")
 
 # -------------------------------------------------------------
-# CSS (Montserrat + #BF5A4E + fond #F7EDE2 + texte noir + selectbox blanches)
+# CSS (Montserrat + #BF5A4E + fond #F7EDE2 + texte noir + selects & dropdowns blancs)
 # -------------------------------------------------------------
 st.markdown(
     """
@@ -27,7 +27,6 @@ st.markdown(
       --shadow:0 12px 30px rgba(0,0,0,0.08);
     }
 
-    /* App background + font */
     html, body, .stApp {
       background: var(--bg) !important;
       font-family: 'Montserrat', sans-serif !important;
@@ -40,8 +39,7 @@ st.markdown(
     }
 
     /* --------------------------------------------------
-       FORCE TEXTE NOIR (markdown, titres, contenu généré, etc.)
-       (sans casser les composants)
+       FORCE TEXTE NOIR (inclut le markdown du séjour généré)
     -------------------------------------------------- */
     .stMarkdown, .stMarkdown * ,
     .stText, .stText * ,
@@ -52,13 +50,7 @@ st.markdown(
       color: var(--text) !important;
     }
 
-    /* Les éléments de texte courants */
-    p, li, ol, ul, strong, em, span, div {
-      color: var(--text);
-    }
-
-    /* Labels */
-    label, .stSelectbox label, .stRadio label, .stTextInput label {
+    label, .stSelectbox label {
       color: var(--text) !important;
       font-weight: 600 !important;
     }
@@ -134,10 +126,10 @@ st.markdown(
     }
 
     /* --------------------------------------------------
-       SELECTBOXES : fond blanc + texte noir (control + menu)
+       SELECTBOX : control blanc + texte noir
     -------------------------------------------------- */
 
-    /* Le "control" (le rectangle visible) */
+    /* Le "control" (rectangle visible) */
     div[data-baseweb="select"] > div{
       background-color: #ffffff !important;
       border: 1px solid var(--border) !important;
@@ -145,19 +137,52 @@ st.markdown(
       box-shadow: none !important;
     }
 
-    /* Le texte à l’intérieur */
+    /* Texte/placeholder */
     div[data-baseweb="select"] span,
     div[data-baseweb="select"] input{
       color: #000000 !important;
       -webkit-text-fill-color: #000000 !important;
     }
 
-    /* Icône flèche */
+    /* Flèche */
     div[data-baseweb="select"] svg{
       fill: #000000 !important;
     }
 
-    /* Menu déroulant */
+    /* --------------------------------------------------
+       DROPDOWN (menu déroulant) : BLANC + TEXTE NOIR
+       BaseWeb rend souvent ça dans un portal/popover
+    -------------------------------------------------- */
+
+    /* Conteneur popover du menu */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div{
+      background: #ffffff !important;
+      color: #000000 !important;
+      border-radius: 14px !important;
+    }
+
+    /* Menu interne */
+    div[data-baseweb="menu"]{
+      background: #ffffff !important;
+      color: #000000 !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.18) !important;
+    }
+
+    /* Items */
+    div[data-baseweb="menu"] *{
+      color: #000000 !important;
+      background: #ffffff !important;
+    }
+
+    /* Hover item */
+    div[data-baseweb="menu"] [role="option"]:hover{
+      background: rgba(191,90,78,0.10) !important;
+    }
+
+    /* Fallback listbox (selon versions Streamlit) */
     ul[role="listbox"]{
       background: #ffffff !important;
       color: #000000 !important;
@@ -244,7 +269,7 @@ else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -------------------------------------------------------------
-# LIEUX (cards + booking links)
+# LIEUX
 # -------------------------------------------------------------
 st.markdown("## 📍 Vos lieux sélectionnés")
 
