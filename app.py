@@ -11,7 +11,7 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# STYLE (Montserrat + #BF5A4E)
+# STYLE (Montserrat + #BF5A4E + fond #F7EDE2)
 # -------------------------------------------------------------
 st.markdown(
     """
@@ -23,7 +23,7 @@ st.markdown(
         --primary-soft: rgba(191, 90, 78, 0.12);
         --primary-border: rgba(191, 90, 78, 0.25);
 
-        --bg: #fafafa;
+        --bg: #F7EDE2;          /* ← NOUVEAU FOND */
         --card: #ffffff;
         --text: #1f2937;
         --muted: #6b7280;
@@ -48,6 +48,9 @@ st.markdown(
         padding-bottom: 3rem;
     }
 
+    /* --------------------------------------------------
+       HEADER
+    -------------------------------------------------- */
     .atlas-title {
         font-size: 3.3rem;
         font-weight: 900;
@@ -63,6 +66,9 @@ st.markdown(
         font-weight: 500;
     }
 
+    /* --------------------------------------------------
+       BOX / CARDS
+    -------------------------------------------------- */
     .atlas-box {
         background: var(--card);
         border-radius: var(--radius);
@@ -94,6 +100,9 @@ st.markdown(
         font-weight: 500;
     }
 
+    /* --------------------------------------------------
+       BADGES / LIENS
+    -------------------------------------------------- */
     .atlas-badge {
         display: inline-block;
         padding: 0.25rem 0.7rem;
@@ -116,6 +125,9 @@ st.markdown(
         text-decoration: underline;
     }
 
+    /* --------------------------------------------------
+       BOUTONS
+    -------------------------------------------------- */
     div.stButton > button:first-child {
         font-family: 'Montserrat', sans-serif;
         font-weight: 800;
@@ -133,6 +145,9 @@ st.markdown(
         transform: translateY(-1px);
     }
 
+    /* --------------------------------------------------
+       INPUTS
+    -------------------------------------------------- */
     div[data-baseweb="select"] > div {
         border-radius: 14px;
         border: 1px solid var(--border);
@@ -148,12 +163,12 @@ st.markdown(
 )
 
 # -------------------------------------------------------------
-# HEADER AVEC LOGO (ÉQUILIBRÉ PREMIUM)
+# HEADER AVEC LOGO PNG (ÉQUILIBRÉ PREMIUM)
 # -------------------------------------------------------------
 col_logo, col_title = st.columns([2, 7], vertical_alignment="center")
 
 with col_logo:
-    st.image("assets/logo_atlas.svg", width=130)
+    st.image("assets/logo_atlas.png", width=130)
 
 with col_title:
     st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
@@ -210,7 +225,7 @@ else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -------------------------------------------------------------
-# AFFICHAGE DES LIEUX (AVEC LIENS DE BOOKING)
+# AFFICHAGE DES LIEUX (AVEC BOOKING)
 # -------------------------------------------------------------
 st.markdown("### 📍 Vos lieux sélectionnés")
 
@@ -231,14 +246,12 @@ for i, (_, row) in enumerate(lieux.iterrows()):
             unsafe_allow_html=True,
         )
 
-        # ⭐ note
         if note_col and row.get(note_col):
             st.markdown(
                 f'<span class="atlas-badge">⭐ {row[note_col]}/5</span>',
                 unsafe_allow_html=True,
             )
 
-        # 🔗 lien booking / réservation
         if row.get("url_reservation"):
             st.markdown(
                 f'<p><a class="atlas-link" href="{row["url_reservation"]}" target="_blank">🔗 Voir / réserver</a></p>',
@@ -248,7 +261,7 @@ for i, (_, row) in enumerate(lieux.iterrows()):
         st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# IA – PROMPT & APPEL
+# IA – GÉNÉRATION
 # -------------------------------------------------------------
 def construire_prompt(pays, categorie, lieux_df):
     lignes = []
@@ -283,9 +296,7 @@ def appeler_ia(prompt):
     )
     return completion.choices[0].message.content
 
-# -------------------------------------------------------------
-# GÉNÉRATION IA
-# -------------------------------------------------------------
+
 st.markdown("---")
 st.markdown("## 🧠 Générer un séjour parfait")
 
