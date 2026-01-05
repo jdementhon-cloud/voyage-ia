@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from groq import Groq
+from pathlib import Path
 
 # -------------------------------------------------------------
 # CONFIG GLOBALE
@@ -11,7 +12,7 @@ st.set_page_config(
 )
 
 # -------------------------------------------------------------
-# STYLE (Montserrat + #BF5A4E + fond #F7EDE2)
+# STYLE GLOBAL
 # -------------------------------------------------------------
 st.markdown(
     """
@@ -23,9 +24,9 @@ st.markdown(
         --primary-soft: rgba(191, 90, 78, 0.12);
         --primary-border: rgba(191, 90, 78, 0.25);
 
-        --bg: #F7EDE2;          /* ← NOUVEAU FOND */
+        --bg: #F7EDE2;
         --card: #ffffff;
-        --text: #1f2937;
+        --text: #000000;
         --muted: #6b7280;
         --border: #e5e7eb;
 
@@ -35,11 +36,11 @@ st.markdown(
 
     html, body, [class*="css"] {
         font-family: 'Montserrat', sans-serif;
+        color: var(--text);
     }
 
     .stApp {
         background: var(--bg);
-        color: var(--text);
     }
 
     .block-container {
@@ -61,7 +62,7 @@ st.markdown(
 
     .atlas-subtitle {
         font-size: 1.05rem;
-        color: var(--muted);
+        color: #374151;
         margin-bottom: 1.8rem;
         font-weight: 500;
     }
@@ -91,11 +92,12 @@ st.markdown(
         font-weight: 800;
         margin-top: 0.6rem;
         margin-bottom: 0.25rem;
+        color: #000000;
     }
 
     .atlas-card-city {
         font-size: 0.9rem;
-        color: var(--muted);
+        color: #374151;
         margin-bottom: 0.4rem;
         font-weight: 500;
     }
@@ -113,6 +115,7 @@ st.markdown(
         font-weight: 600;
         margin-right: 0.35rem;
         margin-bottom: 0.35rem;
+        color: #000000;
     }
 
     .atlas-link {
@@ -146,8 +149,29 @@ st.markdown(
     }
 
     /* --------------------------------------------------
-       INPUTS
+       INPUTS – TEXTE NOIR (CORRECTION)
     -------------------------------------------------- */
+    div[data-baseweb="select"] span {
+        color: #000000 !important;
+    }
+
+    div[data-baseweb="select"] span[aria-hidden="true"] {
+        color: #6b7280 !important;
+    }
+
+    input {
+        color: #000000 !important;
+    }
+
+    label {
+        color: #000000 !important;
+        font-weight: 600;
+    }
+
+    .stAlert p {
+        color: #000000 !important;
+    }
+
     div[data-baseweb="select"] > div {
         border-radius: 14px;
         border: 1px solid var(--border);
@@ -163,12 +187,17 @@ st.markdown(
 )
 
 # -------------------------------------------------------------
-# HEADER AVEC LOGO PNG (ÉQUILIBRÉ PREMIUM)
+# HEADER AVEC LOGO PNG
 # -------------------------------------------------------------
+logo_path = Path(__file__).parent / "assets" / "logo_atlas.png"
+
 col_logo, col_title = st.columns([2, 7], vertical_alignment="center")
 
 with col_logo:
-    st.image("assets/logo_atlas.png", width=130)
+    if logo_path.exists():
+        st.image(str(logo_path), width=130)
+    else:
+        st.warning("Logo introuvable : assets/logo_atlas.png")
 
 with col_title:
     st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
@@ -192,14 +221,10 @@ def load_data():
     )
     return df
 
-
 df = load_data()
 
 note_col = next((c for c in df.columns if "note" in c), None)
-image_col = next(
-    (c for c in ["lien_images", "image_url", "photo", "image"] if c in df.columns),
-    None,
-)
+image_col = next((c for c in ["lien_images", "image_url", "photo", "image"] if c in df.columns), None)
 
 # -------------------------------------------------------------
 # UI – CHOIX PAYS & CATÉGORIE
@@ -225,7 +250,7 @@ else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -------------------------------------------------------------
-# AFFICHAGE DES LIEUX (AVEC BOOKING)
+# AFFICHAGE DES LIEUX
 # -------------------------------------------------------------
 st.markdown("### 📍 Vos lieux sélectionnés")
 
@@ -269,6 +294,8 @@ def construire_prompt(pays, categorie, lieux_df):
         ligne = f"- **{row.get('nom_lieu','Lieu')}** ({row.get('ville','')})"
         if note_col and row.get(note_col):
             ligne += f" — ⭐ {row[note_col]}/5"
+        if row.get("url_reservation"):
+            ligne += f"\n  🔗 Réservation : {row.get('url_reservation')}"
         lignes.append(ligne)
 
     return f"""
@@ -282,7 +309,6 @@ Lieux disponibles :
 Structure par jour, conseils pratiques, ton chaleureux.
 """
 
-
 def appeler_ia(prompt):
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
     completion = client.chat.completions.create(
@@ -295,7 +321,6 @@ def appeler_ia(prompt):
         max_tokens=1800,
     )
     return completion.choices[0].message.content
-
 
 st.markdown("---")
 st.markdown("## 🧠 Générer un séjour parfait")
