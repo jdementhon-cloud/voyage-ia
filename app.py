@@ -182,4 +182,118 @@ def construire_prompt(pays: str, categorie: str, lieux_df: pd.DataFrame) -> str:
             ligne += f" — ⭐ {note}/5"
         if ideal:
             ligne += f" — Idéal pour : {ideal}"
-        if u
+        if url_resa:
+            ligne += f"\n  🔗 Réservation : {url_resa}"
+        lignes.append(ligne)
+
+    texte_lieux = "\n".join(lignes)
+
+    prompt = f"""
+Tu es un expert en voyages et créateur d'itinéraires sur-mesure.
+
+Crée un **itinéraire inspirant et réaliste de 3 jours** à **{pays}**, centré sur la catégorie d’activités **{categorie}**.
+
+Voici la liste des lieux à intégrer (au minimum quelques-uns dans l’itinéraire) :
+
+{texte_lieux}
+
+### FORMAT ATTENDU
+
+- Présente ton résultat en sections claires :
+  - **Jour 1** : programme détaillé, rythme de la journée, visites, pauses, ambiance.
+  - **Jour 2** : idem.
+  - **Jour 3** : idem.
+- Indique explicitement quand l’un des lieux listés est utilisé (par son nom).
+- Donne quelques conseils pratiques : horaires recommandés, durée sur place, ambiance, budget.
+- Termine par une courte conclusion qui donne envie de partir.
+
+Le ton doit être chaleureux, précis, rassurant, mais pas trop long.
+"""
+    return prompt
+
+
+def appeler_ia(prompt: str) -> str:
+    """Appel à l'API Groq avec le modèle llama-3.1-8b-instant."""
+    try:
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "Tu es un expert des voyages haut de gamme."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+            max_tokens=1800,
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        return f"❌ Erreur lors de l’appel à l’IA : {e}"
+
+# -------------------------------------------------------------
+# AFFICHAGE DES LIEUX (PHOTOS, SANS CARTE)
+# -------------------------------------------------------------
+st.markdown("### 📍 Vos lieux sélectionnés")
+
+if not lieux.empty:
+    st.markdown("### ✨ Suggestions de spots")
+
+    cols = st.columns(3)
+    for i, (_, row) in enumerate(lieux.iterrows()):
+        with cols[i % 3]:
+            st.markdown('<div class="atlas-card">', unsafe_allow_html=True)
+
+            nom = row.get("nom_lieu", "Lieu")
+            ville = row.get("ville", "")
+            note = row.get(note_col, None) if note_col else None
+            ideal = row.get("ideal_pour", "")
+            url_resa = row.get("url_reservation", "")
+
+            # Image
+            if image_col and pd.notna(row.get(image_col, None)):
+                try:
+                    st.image(row[image_col], use_column_width=True)
+                except Exception:
+                    pass
+
+            st.markdown(f'<div class="atlas-card-title">{nom}</div>', unsafe_allow_html=True)
+            if ville:
+                st.markdown(f'<div class="atlas-card-city">{ville}</div>', unsafe_allow_html=True)
+
+            # Badges
+            badges = []
+            if note not in [None, ""]:
+                badges.append(f"⭐ {note}/5")
+            if ideal:
+                badges.append(f"🎯 {ideal}")
+            for b in badges:
+                st.markdown(f'<span class="atlas-badge">{b}</span>', unsafe_allow_html=True)
+
+            if url_resa:
+                st.markdown(
+                    f'<p><a class="atlas-link" href="{url_resa}" target="_blank">🔗 Voir la page / réserver</a></p>',
+                    unsafe_allow_html=True,
+                )
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------------------------------------
+# GÉNÉRATION DU SÉJOUR AVEC L’IA (SANS EXPORT PDF)
+# -------------------------------------------------------------
+st.markdown("---")
+st.markdown("## 🧠 Générer un séjour parfait avec ATLAS")
+
+col_button, _ = st.columns([1, 3])
+with col_button:
+    lancer = st.button("✨ Générer mon séjour parfait")
+
+if lancer and lieux.empty:
+    st.error("Impossible de générer un séjour : aucun lieu pour cette sélection.")
+elif lancer:
+    with st.spinner("🤖 L’IA prépare votre séjour, un instant…"):
+        prompt = construire_prompt(pays, categorie, lieux)
+        resultat = appeler_ia(prompt)
+        st.session_state["atlas_resultat"] = resultat
+
+if "atlas_resultat" in st.session_state:
+    st.markdown("### 🧳 Votre séjour personnalisé")
+    st.markdown(st.session_state["atlas_resultat"])
