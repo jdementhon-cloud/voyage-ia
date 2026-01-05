@@ -44,12 +44,12 @@ st.markdown(
 
     .block-container {
         max-width: 1200px;
-        padding-top: 2.2rem;
+        padding-top: 2.4rem;
         padding-bottom: 3rem;
     }
 
     .atlas-title {
-        font-size: 3.2rem;
+        font-size: 3.3rem;
         font-weight: 900;
         letter-spacing: -0.03em;
         margin-bottom: 0.15rem;
@@ -148,12 +148,12 @@ st.markdown(
 )
 
 # -------------------------------------------------------------
-# HEADER AVEC LOGO SVG (MÉTHODE FIABLE STREAMLIT CLOUD)
+# HEADER AVEC LOGO (ÉQUILIBRÉ PREMIUM)
 # -------------------------------------------------------------
-col_logo, col_title = st.columns([1, 8], vertical_alignment="center")
+col_logo, col_title = st.columns([2, 7], vertical_alignment="center")
 
 with col_logo:
-    st.image("assets/logo_atlas.svg", width=60)
+    st.image("assets/logo_atlas.svg", width=130)
 
 with col_title:
     st.markdown('<div class="atlas-title">ATLAS</div>', unsafe_allow_html=True)
@@ -181,7 +181,6 @@ def load_data():
 df = load_data()
 
 note_col = next((c for c in df.columns if "note" in c), None)
-
 image_col = next(
     (c for c in ["lien_images", "image_url", "photo", "image"] if c in df.columns),
     None,
@@ -211,7 +210,7 @@ else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -------------------------------------------------------------
-# PROMPT IA
+# IA – PROMPT & APPEL
 # -------------------------------------------------------------
 def construire_prompt(pays, categorie, lieux_df):
     lignes = []
@@ -278,8 +277,9 @@ st.markdown("## 🧠 Générer un séjour parfait")
 
 if st.button("✨ Générer mon séjour parfait"):
     with st.spinner("🤖 Génération en cours…"):
-        resultat = appeler_ia(construire_prompt(pays, categorie, lieux))
-        st.session_state["resultat"] = resultat
+        st.session_state["resultat"] = appeler_ia(
+            construire_prompt(pays, categorie, lieux)
+        )
 
 if "resultat" in st.session_state:
     st.markdown("### 🧳 Votre séjour personnalisé")
