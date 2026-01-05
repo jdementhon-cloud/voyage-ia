@@ -210,6 +210,44 @@ else:
     st.success(f"🔎 {len(lieux)} lieu(x) trouvé(s)")
 
 # -------------------------------------------------------------
+# AFFICHAGE DES LIEUX (AVEC LIENS DE BOOKING)
+# -------------------------------------------------------------
+st.markdown("### 📍 Vos lieux sélectionnés")
+
+cols = st.columns(3)
+for i, (_, row) in enumerate(lieux.iterrows()):
+    with cols[i % 3]:
+        st.markdown('<div class="atlas-card">', unsafe_allow_html=True)
+
+        if image_col and pd.notna(row.get(image_col)):
+            st.image(row[image_col], use_column_width=True)
+
+        st.markdown(
+            f'<div class="atlas-card-title">{row.get("nom_lieu","Lieu")}</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f'<div class="atlas-card-city">{row.get("ville","")}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # ⭐ note
+        if note_col and row.get(note_col):
+            st.markdown(
+                f'<span class="atlas-badge">⭐ {row[note_col]}/5</span>',
+                unsafe_allow_html=True,
+            )
+
+        # 🔗 lien booking / réservation
+        if row.get("url_reservation"):
+            st.markdown(
+                f'<p><a class="atlas-link" href="{row["url_reservation"]}" target="_blank">🔗 Voir / réserver</a></p>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------------------------------------
 # IA – PROMPT & APPEL
 # -------------------------------------------------------------
 def construire_prompt(pays, categorie, lieux_df):
@@ -244,30 +282,6 @@ def appeler_ia(prompt):
         max_tokens=1800,
     )
     return completion.choices[0].message.content
-
-# -------------------------------------------------------------
-# AFFICHAGE DES LIEUX
-# -------------------------------------------------------------
-st.markdown("### 📍 Vos lieux sélectionnés")
-
-cols = st.columns(3)
-for i, (_, row) in enumerate(lieux.iterrows()):
-    with cols[i % 3]:
-        st.markdown('<div class="atlas-card">', unsafe_allow_html=True)
-
-        if image_col and pd.notna(row.get(image_col)):
-            st.image(row[image_col], use_column_width=True)
-
-        st.markdown(
-            f'<div class="atlas-card-title">{row.get("nom_lieu","Lieu")}</div>',
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f'<div class="atlas-card-city">{row.get("ville","")}</div>',
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # GÉNÉRATION IA
