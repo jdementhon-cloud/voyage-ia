@@ -20,7 +20,7 @@ st.markdown(
       --primary:#BF5A4E;
       --bg:#F7EDE2;
       --card:#ffffff;
-      --text:#111827;   /* noir doux */
+      --text:#111827;
       --muted:#6b7280;
       --border:#e5e7eb;
       --radius:18px;
@@ -39,14 +39,12 @@ st.markdown(
       padding-bottom:3rem;
     }
 
-    /* --------------------------------------------------
-       TEXTE (y compris résultat IA)
-    -------------------------------------------------- */
-    .stMarkdown, .stMarkdown *,
-    .stText, .stText *,
-    .stCaption, .stCaption *,
-    .stSubheader, .stSubheader *,
-    .stHeader, .stHeader *,
+    /* Texte (y compris résultat IA) */
+    .stMarkdown, .stMarkdown * ,
+    .stText, .stText * ,
+    .stCaption, .stCaption * ,
+    .stSubheader, .stSubheader * ,
+    .stHeader, .stHeader * ,
     .stTitle, .stTitle * {
       color: var(--text) !important;
     }
@@ -56,9 +54,7 @@ st.markdown(
       font-weight: 600 !important;
     }
 
-    /* --------------------------------------------------
-       HEADER
-    -------------------------------------------------- */
+    /* Header */
     .atlas-title{
       font-size:3.3rem;
       font-weight:900;
@@ -68,7 +64,7 @@ st.markdown(
     }
     .atlas-subtitle{
       font-size:1.05rem;
-      color: #374151 !important;
+      color:#374151 !important;
       margin-bottom:2rem;
       font-weight:500;
     }
@@ -81,7 +77,6 @@ st.markdown(
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
     }
-
     .atlas-card-title{
       font-size:1.05rem;
       font-weight:800;
@@ -91,7 +86,7 @@ st.markdown(
     }
     .atlas-card-city{
       font-size:0.9rem;
-      color: #374151 !important;
+      color:#374151 !important;
       margin-bottom:0.4rem;
       font-weight:500;
     }
@@ -116,7 +111,7 @@ st.markdown(
     }
     a.atlas-link:hover{ text-decoration:underline; }
 
-    /* Buttons */
+    /* Boutons */
     div.stButton > button{
       background: var(--primary) !important;
       color: #ffffff !important;
@@ -126,20 +121,22 @@ st.markdown(
       padding:0.65rem 1.6rem !important;
     }
 
-    /* --------------------------------------------------
-       ✅ SELECTBOX : NOIR SUR BLANC (CONTROL + DROPDOWN)
-       On cible BaseWeb très explicitement + portal/popover/menu
-    -------------------------------------------------- */
+    img{ border-radius:14px; }
+    .stAlert, .stAlert * { color: var(--text) !important; }
 
-    /* CONTROL (le champ visible) */
+    /* =========================================================
+       ✅ SELECT + DROPDOWN 100% NOIR SUR BLANC (BASEWEB)
+       ========================================================= */
+
+    /* 1) CONTROL (champ visible) */
     div[data-baseweb="select"] > div{
-      background: #ffffff !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 14px !important;
-      box-shadow: none !important;
+      background-color:#ffffff !important;
+      border:1px solid var(--border) !important;
+      border-radius:14px !important;
+      box-shadow:none !important;
     }
 
-    /* Valeur sélectionnée / input */
+    /* Texte sélectionné / valeur */
     div[data-baseweb="select"] span,
     div[data-baseweb="select"] input{
       color: var(--text) !important;
@@ -147,62 +144,67 @@ st.markdown(
       background: transparent !important;
     }
 
-    /* Placeholder (évite blanc sur blanc) */
-    div[data-baseweb="select"] [data-baseweb="select"] span[aria-hidden="true"],
+    /* Placeholder lisible */
     div[data-baseweb="select"] span[aria-hidden="true"]{
       color: var(--muted) !important;
       -webkit-text-fill-color: var(--muted) !important;
     }
 
-    /* Chevron (flèche) */
+    /* Chevron */
     div[data-baseweb="select"] svg{
       fill: var(--text) !important;
     }
 
-    /* DROPDOWN — BaseWeb popover/menu (portal) */
+    /* 2) DROPDOWN (portal/popover) — on force large, car Streamlit varie */
+    /* Popover wrapper */
     div[data-baseweb="popover"],
-    div[data-baseweb="popover"] > div{
-      background: #ffffff !important;
+    div[data-baseweb="popover"] > div,
+    div[data-baseweb="popover"] > div > div{
+      background:#ffffff !important;
       color: var(--text) !important;
-      border-radius: 14px !important;
+      border-radius:14px !important;
     }
 
+    /* Menu container (quand présent) */
     div[data-baseweb="menu"]{
-      background: #ffffff !important;
+      background:#ffffff !important;
       color: var(--text) !important;
-      border: 1px solid var(--border) !important;
-      border-radius: 14px !important;
+      border:1px solid var(--border) !important;
+      border-radius:14px !important;
       box-shadow: 0 18px 40px rgba(0,0,0,0.18) !important;
-      overflow: hidden !important;
+      overflow:hidden !important;
     }
 
-    /* Items du menu */
-    div[data-baseweb="menu"] *{
-      background: #ffffff !important;
+    /* 3) Listbox/Options (fallback universel) */
+    [role="listbox"]{
+      background:#ffffff !important;
+      color: var(--text) !important;
+      border:1px solid var(--border) !important;
+      border-radius:14px !important;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.18) !important;
+    }
+
+    /* Les options peuvent être div[role="option"] ou li[role="option"] */
+    [role="option"]{
+      background:#ffffff !important;
       color: var(--text) !important;
     }
 
-    /* Hover / option active */
-    div[data-baseweb="menu"] [role="option"]:hover{
+    /* Hover + focus */
+    [role="option"]:hover,
+    [role="option"][aria-selected="true"]{
       background: var(--hover) !important;
       color: var(--text) !important;
     }
 
-    /* Fallback selon versions : listbox */
-    [role="listbox"], [role="listbox"] *{
-      background: #ffffff !important;
+    /* Important : empêcher tout thème dark de repasser derrière */
+    div[data-baseweb="menu"] *,
+    [role="listbox"] *,
+    [role="option"] *{
       color: var(--text) !important;
+      -webkit-text-fill-color: var(--text) !important;
+      background: transparent !important;
     }
-    [role="listbox"] [role="option"]:hover{
-      background: var(--hover) !important;
-    }
-
-    /* Images */
-    img{ border-radius:14px; }
-
-    /* Alerts */
-    .stAlert, .stAlert * { color: var(--text) !important; }
-
     </style>
     """,
     unsafe_allow_html=True,
